@@ -30,7 +30,6 @@ export function StartScreen({ loading, onLoad, onDone }: { loading: boolean; onL
       <div className="start-card">
         <div className="brand-lg"><Logo size={44} /><span>Domino</span></div>
         <p className="tagline">{t('Find the domino that knocks out the claim.')}</p>
-        <p className="muted small">{t('Procedural consequence chains for French civil litigation — every fact anchored, every rule shown.')}</p>
         {!loading ? (
           <>
             <div className="drop" aria-disabled>
@@ -38,7 +37,6 @@ export function StartScreen({ loading, onLoad, onDone }: { loading: boolean; onL
               <span className="muted">{t('PDF, scans, .eml — disabled in this demo')}</span>
             </div>
             <button className="btn primary lg" onClick={onLoad} autoFocus>{t('Load sample case')}</button>
-            <p className="muted small">{t('Atelier Lumière v. Bâtiself')} · Tribunal de commerce de Bordeaux</p>
           </>
         ) : (
           <ol className="stages">

@@ -46,7 +46,7 @@ export function FilmIntro() {
   const soundRef = useRef<ReturnType<typeof createFilmSound> | null>(null);
 
   useEffect(() => {
-    if (!visible || closing) return;
+    if (!visible) return;
     let active = true;
     let film: Film | null = null;
     const timers = new Set<ReturnType<typeof setTimeout>>();

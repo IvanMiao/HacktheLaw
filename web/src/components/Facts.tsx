@@ -1,6 +1,5 @@
 import { useLocale } from '../i18n/useLocale';
 import { FACTS, qualById, type Anchor, type Fact } from '../data/case';
-import { docById } from '../data/documents';
 import { value, type Analysis, type AnalysisState, type Counterfactual, type Decision } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
@@ -25,7 +24,7 @@ export function FactList({ state, selected, onSelect }: { state: AnalysisState; 
   const { t } = useLocale();
   return (
     <div className="facts">
-      <div className="col-head">{t('Facts')} <span className="muted">{FACTS.length} · {t('chronological')}</span></div>
+      <div className="col-head">{t('Facts')} <span className="muted">{FACTS.length}</span></div>
       <ol>
         {FACTS.map((f) => (
           <li key={f.id}>
@@ -58,7 +57,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
 
   return (
     <div className="detail">
-      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)} · {docById(fact.doc).title}</div>
+      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)}</div>
       <h2>{t(fact.summary)}</h2>
       {fact.anchors.map((a) => (
         <figure key={a.quote} className="excerpt">
@@ -71,8 +70,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
         <section className={`qual ${q.source === 'ai_inferred' ? 'is-ai' : ''}`}>
           <div className="qual-head">
             <span className="section-label">{t('Legal qualification')}</span>
-            {q.source === 'ai_inferred' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="rule-tag">{t('Rule')}</span>}
-            <span className="muted small">{t('confidence:')} {t(q.confidence)}</span>
+            {q.source === 'ai_inferred' && <span className="ai-tag">{t('AI-inferred')}</span>}
           </div>
           <p className="question">{t(q.question)}</p>
           <p className="answer"><QualBadge qid={q.id} state={state} /></p>

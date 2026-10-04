@@ -33,7 +33,6 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
       <section className="stress">
         <div className="stress-head">
           <span className="section-label">{t('Stress-test')}</span>
-          <span className="muted small">{t('Flip a contested link and watch the dominoes.')}</span>
           {anyWhatIf && <button className="linkish small" onClick={onReset}>{t('Reset scenario')}</button>}
         </div>
         <div className="toggles">
@@ -49,7 +48,6 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
             <input type="checkbox" checked={state.art642} onChange={on642} />
             <span className="switch" aria-hidden />
             <span>{t('Extend a weekend expiry (art. 642 CPC)')}</span>
-            <span className="effect neutral">{t('flag')}</span>
           </label>
         </div>
       </section>
@@ -93,11 +91,9 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
                   <strong>{l.title}</strong>
                   <span>{l.statement}</span>
                 </span>
-                <span className="tile-foot">
-                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span>
-                    : l.status === 'broken' ? <span className="breaks">{t('Breaks here')}</span>
-                    : <span className="mono">{l.rule ?? t(l.anchors.length === 1 ? '{count} source' : '{count} sources', { count: l.anchors.length })}</span>}
-                </span>
+                {(l.status === 'contested' || l.status === 'broken') && <span className="tile-foot">
+                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="breaks">{t('Breaks here')}</span>}
+                </span>}
               </button>
             </li>
           );

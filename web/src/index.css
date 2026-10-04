@@ -42,20 +42,30 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1p
 
 /* Shell */
 .app { height: 100vh; display: grid; grid-template-rows: 52px auto 1fr; }
-.topbar { display: flex; align-items: center; gap: 20px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--line); }
+.topbar { display: flex; align-items: center; gap: 16px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--line); position: relative; z-index: 3; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; letter-spacing: -0.02em; }
-.case-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.case-name { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .modes { margin-left: auto; display: flex; gap: 2px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
 .modes button { padding: 5px 12px; border-radius: 6px; color: var(--ink-2); font-weight: 500; }
 .modes button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 0 0 1px var(--line); }
-.asof { color: var(--muted); white-space: nowrap; }
+.case-context { position: relative; flex: none; }
+.case-context summary { list-style: none; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 17px; }
+.case-context summary::-webkit-details-marker { display: none; }
+.case-context summary:hover, .case-context[open] summary { color: var(--ink); border-color: var(--line-2); background: var(--paper); }
+.case-context-panel { position: absolute; top: calc(100% + 10px); right: 0; width: min(310px, calc(100vw - 24px)); padding: 16px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--card); box-shadow: 0 12px 32px rgb(0 0 0 / .13); }
+.case-context-panel h2 { font-size: 14px; margin-bottom: 12px; }
+.case-context-panel dl { display: grid; gap: 10px; margin: 0; }
+.case-context-panel dl > div { display: grid; grid-template-columns: 94px minmax(0, 1fr); gap: 10px; }
+.case-context-panel dt { color: var(--muted); font-size: 12px; }
+.case-context-panel dd { margin: 0; font-size: 12px; }
 
-.banner { display: flex; align-items: center; gap: 8px; padding: 9px 20px; border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap; }
+.banner { display: flex; align-items: center; gap: 10px; padding: 9px 20px; border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap; }
 .banner .b-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--red); }
 .banner.b-none .b-dot { background: var(--green); }
+.banner strong { font-size: 14px; }
+.banner-secondary { font-size: 11px; color: var(--muted); margin-left: 4px; }
 .banner .b-prov { color: var(--violet); }
 .banner .b-whatif { color: var(--amber); }
-.banner .b-right { margin-left: auto; color: var(--muted); }
 
 .body { display: grid; grid-template-columns: 290px minmax(0, 1fr) 420px; min-height: 0; }
 .viewer-closed .body { grid-template-columns: 290px minmax(0, 1fr) 0; }
@@ -101,7 +111,6 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1p
 .btn.danger { border-color: var(--red); color: var(--red); background: var(--red-bg); }
 .btn.lg { padding: 11px 22px; font-size: 15px; }
 .ai-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--violet); border: 1px dashed var(--violet); border-radius: 4px; padding: 0 5px; background: var(--violet-bg); white-space: nowrap; }
-.rule-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; }
 .usedin { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; }
 .st { font-size: 11px; text-transform: capitalize; }
 .st-established { color: var(--ink-2); } .st-contested { color: var(--violet); } .st-broken { color: var(--green); } .st-not_reached { color: var(--muted); }
@@ -322,12 +331,12 @@ mark.hl.active { background: #fde9a8; border-bottom-color: var(--amber); animati
 html[lang='fr'] .tile > button { height: 224px; }
 html[lang='fr'] .tile-body { font-size: 11.5px; }
 html[lang='fr'] .tile-body strong { font-size: 12px; }
-@media (max-width: 1100px) {
-  .topbar .asof { display: none; }
-}
 @media (max-width: 640px) {
   .start-card { width: min(460px, calc(100% - 40px)); }
-  .topbar { padding: 0 10px; gap: 8px; }
-  .topbar .case-name { display: none; }
+  .app { grid-template-rows: auto auto 1fr; }
+  .topbar { padding: 8px 10px; gap: 8px; flex-wrap: wrap; }
+  .topbar .brand span { display: none; }
+  .topbar .case-name { flex: 1; }
+  .topbar .modes { order: 2; width: 100%; margin: 0; justify-content: center; }
   .modes button { padding: 5px 7px; }
 }

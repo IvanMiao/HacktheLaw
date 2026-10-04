@@ -102,23 +102,33 @@ export default function App() {
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
-        <div className="case-name">{t(CASE.title)} <span className="muted">· {CASE.court} · {t('acting for the defendant')}</span></div>
+        <div className="case-name">{t(CASE.title)}</div>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([m, label], i) => (
             <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{t(label)}<kbd>{i + 1}</kbd></button>
           ))}
         </nav>
         <LanguageSwitch />
-        <div className="asof mono">{t('As of')} {long(CASE.asOf, locale)}</div>
+        <details className="case-context">
+          <summary aria-label={t('Case details')} title={t('Case details')}>ⓘ</summary>
+          <div className="case-context-panel">
+            <h2>{t('Case details')}</h2>
+            <dl>
+              <div><dt>{t('Court')}</dt><dd>{CASE.court}</dd></div>
+              <div><dt>{t('Side')}</dt><dd>{t('acting for the defendant')}</dd></div>
+              <div><dt>{t('As of')}</dt><dd>{long(CASE.asOf, locale)}</dd></div>
+              <div><dt>{t('Next hearing')}</dt><dd>{long(CASE.nextHearing, locale)} · {t('in {days} days', { days: daysBetween(CASE.asOf, CASE.nextHearing) })}</dd></div>
+            </dl>
+          </div>
+        </details>
       </header>
 
       <div className={`banner ${grounds ? 'b-grounds' : 'b-none'}`} role="status">
         <span className="b-dot" />
         <strong>{grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds }) : t('No ground found in the 2 enabled chains')}</strong>
-        {contestedLinks > 0 && <span>· {t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
-        {pendingAi > 0 && <span className="b-prov">· {t(pendingAi === 1 ? 'Provisional — {count} AI qualification awaiting review' : 'Provisional — {count} AI qualifications awaiting review', { count: pendingAi })}</span>}
-        {whatIf && <span className="b-whatif">· {t('What-if scenario')} <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>{t('reset')}</button></span>}
-        <span className="b-right mono">{t('Next hearing {date} · in {days} days', { date: long(CASE.nextHearing, locale), days: daysBetween(CASE.asOf, CASE.nextHearing) })}</span>
+        {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
+          : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
+        {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>
 
       <div className="body">
