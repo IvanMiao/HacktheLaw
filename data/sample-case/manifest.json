@@ -1,0 +1,11 @@
+[
+  { "id": "contract", "file": "sample-case/contract.txt", "title": "Contrat de fourniture et d’installation", "short": "Contract", "date": "2020-11-05", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "invoice", "file": "sample-case/invoice.txt", "title": "Facture F-2021-034", "short": "Invoice", "date": "2021-02-13", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "email", "file": "sample-case/email.txt", "title": "Courriel de M. Delorme (Bâtiself)", "short": "Email", "date": "2022-06-02", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "notice", "file": "sample-case/notice.txt", "title": "Mise en demeure (LRAR)", "short": "Formal notice", "date": "2023-02-10", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "writ1", "file": "sample-case/writ1.txt", "title": "Assignation n° 1 — tribunal de commerce", "short": "Writ #1", "date": "2026-01-12", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "registry", "file": "sample-case/registry.txt", "title": "Tampon du greffe — remise de l’assignation", "short": "Registry stamp", "date": "2026-02-16", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "order", "file": "sample-case/order.txt", "title": "Ordonnance de caducité", "short": "Court order", "date": "2026-02-20", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "writ2", "file": "sample-case/writ2.txt", "title": "Assignation n° 2 — tribunal de commerce", "short": "Writ #2", "date": "2026-04-08", "provenance": "mock", "note": "Synthetic case document — fictitious parties." },
+  { "id": "pieces", "file": "sample-case/pieces.txt", "title": "Bordereau des pièces communiquées (assignation n° 2)", "short": "List of exhibits", "date": "2026-04-08", "provenance": "mock", "note": "Synthetic case document — fictitious parties." }
+]

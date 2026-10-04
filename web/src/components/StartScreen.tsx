@@ -1,26 +1,26 @@
 import { useLocale } from '../i18n/useLocale';
 import { useEffect, useState } from 'react';
-import { DOCS } from '../data/documents';
-import { FACTS, QUALIFICATIONS } from '../data/case';
+import { useBundle } from '../data/useBundle';
+import type { CaseBundle } from '../data/bundle';
 import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Glyphs';
 
-const STAGES = [
-  { label: 'Reading documents', count: DOCS.length, unit: 'documents' },
-  { label: 'Extracting facts', count: FACTS.length, unit: 'anchored facts' },
-  { label: 'Qualifying', count: QUALIFICATIONS.length, unit: 'qualifications proposed' },
-  { label: 'Running chains', count: 2, unit: 'chains evaluated' },
-];
-
-export function StartScreen({ loading, onLoad, onDone }: { loading: boolean; onLoad: () => void; onDone: () => void }) {
+export function StartScreen({ loading, onLoad, onDone, onBundle }: { loading: boolean; onLoad: () => void; onDone: () => void; onBundle?: (bundle: CaseBundle) => void }) {
   const { t } = useLocale();
+  const { bundle, docs } = useBundle();
+  const stages = [
+    { label: 'Reading documents', count: docs.length, unit: 'documents' },
+    { label: 'Extracting facts', count: bundle.facts.length, unit: 'anchored facts' },
+    { label: 'Qualifying', count: bundle.qualifications.length, unit: 'qualifications proposed' },
+    { label: 'Running chains', count: 2, unit: 'chains evaluated' },
+  ];
   const [stage, setStage] = useState(0);
   useEffect(() => {
     if (!loading) return;
-    if (stage >= STAGES.length) { const t = setTimeout(onDone, 350); return () => clearTimeout(t); }
+    if (stage >= stages.length) { const t = setTimeout(onDone, 350); return () => clearTimeout(t); }
     const t = setTimeout(() => setStage((s) => s + 1), 480);
     return () => clearTimeout(t);
-  }, [loading, stage, onDone]);
+  }, [loading, stage, onDone, stages.length]);
 
   return (
     <main className="start">
@@ -35,12 +35,12 @@ export function StartScreen({ loading, onLoad, onDone }: { loading: boolean; onL
               <strong>{t('Drop a case file')}</strong>
               <span className="muted">{t('PDF, scans, .eml — disabled in this demo')}</span>
             </div>
-            <button className="btn primary lg" onClick={onLoad} autoFocus>{t('Load sample case')}</button>
-            <p className="muted small">{t('Atelier Lumière v. Bâtiself')} · Tribunal de commerce de Bordeaux</p>
+            <button className="btn primary lg" onClick={() => { onBundle?.(bundle); onLoad(); }} autoFocus>{t('Load sample case')}</button>
+            <p className="muted small">{t(bundle.profile.title)} · {bundle.profile.court}</p>
           </>
         ) : (
           <ol className="stages">
-            {STAGES.map((s, i) => (
+            {stages.map((s, i) => (
               <li key={s.label} className={i < stage ? 'done' : i === stage ? 'now' : ''}>
                 <span className="dot" />
                 <span>{t(s.label)}</span>
