@@ -30,7 +30,7 @@ export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: 
           {GROUPS.map(([g, label]) => (
             <optgroup key={g} label={t(label)}>
               {docs.filter((d) => d.group === g).map((d) => (
-                <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}{d.provenance === 'mock' ? t(' (mock)') : ''}</option>
+                <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}</option>
               ))}
             </optgroup>
           ))}

@@ -27,7 +27,7 @@ export function FactList({ state, selected, onSelect }: { state: AnalysisState; 
   const { bundle } = useBundle();
   return (
     <div className="facts">
-      <div className="col-head">{t('Facts')} <span className="muted">{bundle.facts.length} · {t('chronological')}</span></div>
+      <div className="col-head">{t('Facts')} <span className="muted">{bundle.facts.length}</span></div>
       <ol>
         {bundle.facts.map((f) => (
           <li key={f.id}>
@@ -52,7 +52,7 @@ type DetailProps = {
 
 export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onOpenLink }: DetailProps) {
   const { t } = useLocale();
-  const { bundle, docOf, qualOf } = useBundle();
+  const { bundle, qualOf } = useBundle();
   const q = fact.qualification ? qualOf(fact.qualification) : undefined;
   const decision = q && state.decisions[q.id];
   const cf = q && cfs.find((c) => c.qid === q.id);
@@ -62,7 +62,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
 
   return (
     <div className="detail">
-      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)} · {t(docOf(fact.doc).title)}{!fact.verified && ` · ${t('Unverified')}`}{bundle.models?.agent && ` · ${t('Extracted by {model}', { model: bundle.models.agent })}`}</div>
+      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)}{!fact.verified && ` · ${t('Unverified')}`}{bundle.models?.agent && ` · ${t('Extracted by {model}', { model: bundle.models.agent })}`}</div>
       <h2>{t(fact.summary)}</h2>
       {!fact.verified && <div className="callout amber">{t('Quote not found in the source — excluded from the chains.')}</div>}
       {fact.anchors.map((a) => (
@@ -76,10 +76,8 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
         <section className={`qual ${q.source === 'ai_inferred' ? 'is-ai' : ''}`}>
           <div className="qual-head">
             <span className="section-label">{t('Legal qualification')}</span>
-            {q.source === 'ai_inferred' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="rule-tag">{t('Rule')}</span>}
-            {q.model
-              ? <span className="muted small">{t('Proposed by {model} · {confidence} confidence', { model: q.model, confidence: t(q.confidence) })}</span>
-              : <span className="muted small">{t('confidence:')} {t(q.confidence)}</span>}
+            {q.source === 'ai_inferred' && <span className="ai-tag">{t('AI-inferred')}</span>}
+            {q.model && <span className="muted small">{t('Proposed by {model} · {confidence} confidence', { model: q.model, confidence: t(q.confidence) })}</span>}
             {q.fallback && <span className="qbadge unverified fallback-badge">{t('No AI answer — default shown')}</span>}
           </div>
           <p className="question">{t(q.question)}</p>

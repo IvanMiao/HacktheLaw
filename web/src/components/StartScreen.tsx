@@ -1,10 +1,10 @@
 import { useLocale } from '../i18n/useLocale';
 import { useRef, useState } from 'react';
-import { useBundle } from '../data/useBundle';
 import type { AgentEvent, CaseBundle } from '../data/bundle';
 import aiBundleJson from '../../../data/sample-case/ai-bundle.json';
 import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Glyphs';
+import { FilmIntro } from './FilmIntro';
 
 const aiBundle = aiBundleJson as unknown as CaseBundle;
 type StreamLine = { type: 'event'; event: AgentEvent } | { type: 'bundle'; bundle: CaseBundle } | { type: 'error'; message: string };
@@ -30,7 +30,6 @@ async function encodeFile(file: File) {
 
 export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onReference, error, onBundle }: Props) {
   const { t } = useLocale();
-  const { bundle } = useBundle();
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -92,11 +91,11 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
 
   return (
     <main className="start">
+      {!loading && <FilmIntro />}
       <div className="start-language"><LanguageSwitch /></div>
       <div className="start-card">
         <div className="brand-lg"><Logo size={44} /><span>Domino</span></div>
         <p className="tagline">{t('Find the domino that knocks out the claim.')}</p>
-        <p className="muted small">{t('Procedural consequence chains for French civil litigation — every fact anchored, every rule shown.')}</p>
         {!loading ? (
           <>
             <input
@@ -130,7 +129,6 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
             </button>
             <label className="fresh-run"><input type="checkbox" checked={fresh} onChange={(event) => setFresh(event.target.checked)} />{t('Fresh run (calls the model)')}</label>
             <button className="linkish reference-link" onClick={() => { onReference(); onDone(); }}>{t('Open hand-checked reference')}</button>
-            <p className="muted small">{t(bundle.profile.title)} · {bundle.profile.court}</p>
           </>
         ) : (
           <div className="stages" aria-live="polite">
