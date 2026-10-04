@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:integrations": "tsx scripts/dev-integrations.ts",
+    "fixture:firm": "tsx scripts/create-firm-fixture.ts",
+    "integration:smoke": "tsx scripts/integration-smoke.ts",
     "voice:server": "bun server/index.ts",
     "voice:smoke": "node scripts/live-smoke.mjs",
     "typecheck:server": "tsc -p tsconfig.server.json",

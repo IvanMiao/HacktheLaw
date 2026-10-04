@@ -18,11 +18,15 @@ import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
 import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
+import { Connections } from './components/Connections';
+import { isFirmImport } from './integrations/provenance';
 
 type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
+  const { locale } = useLocale();
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [caseId, setCaseId] = useState<CaseId>(() => {
     const requested = new URLSearchParams(location.search).get('case');
     return PRESETS.find((preset) => preset.id === requested)?.id as CaseId ?? 'c1-c2';
@@ -43,7 +47,9 @@ export default function App() {
     setCaseId(nextCaseId);
     setBundle(next);
   };
-  return <BundleProvider bundle={bundle}><AppContent
+  return <BundleProvider bundle={bundle}><button className="btn connections-toggle" onClick={() => setConnectionsOpen(true)}>{locale === 'fr' ? 'Connexions' : 'Connections'}</button>
+    {connectionsOpen && <Connections onClose={() => setConnectionsOpen(false)} onView={(next) => { switchBundle(next); setHasLoaded(true); setConnectionsOpen(false); }} />}
+    <AppContent
     key={bundle.id}
     onBundle={switchBundle}
     initialReady={hasLoaded || !!bundle.preset}
@@ -95,7 +101,9 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
 
   const analysis = useMemo(() => analyse(bundle, state, t), [bundle, state, t]);
   const cfs = useMemo(() => counterfactuals(bundle, state, t), [bundle, state, t]);
-  const provenance = bundle.provider && bundle.models?.agent
+  const provenance = isFirmImport(bundle)
+    ? (locale === 'fr' ? 'Import du cabinet · validation requise' : 'Firm import · review required')
+    : bundle.provider && bundle.models?.agent
     ? t('AI · {provider} {model} · {status}', {
       provider: bundle.provider,
       model: bundle.models.agent,
@@ -257,7 +265,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
           : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
           : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
-        {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
+        {pendingAi > 0 ? <span className="banner-secondary b-prov">{isFirmImport(bundle) ? (locale === 'fr' ? `${pendingAi} propositions importées à valider` : `${pendingAi} imported proposals pending review`) : t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>

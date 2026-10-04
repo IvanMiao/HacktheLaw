@@ -4,6 +4,7 @@ import type { Anchor, Fact } from '../data/bundle';
 import { value, type Analysis, type AnalysisState, type Counterfactual, type Decision } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
+import { isFirmImport } from '../integrations/provenance';
 
 function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
   const { t } = useLocale();
@@ -51,7 +52,7 @@ type DetailProps = {
 };
 
 export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onOpenLink }: DetailProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { bundle, qualOf } = useBundle();
   const q = fact.qualification ? qualOf(fact.qualification) : undefined;
   const decision = q && state.decisions[q.id];
@@ -64,6 +65,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
     <div className="detail">
       <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)}{!fact.verified && ` · ${t('Unverified')}`}{bundle.models?.agent && ` · ${t('Extracted by {model}', { model: bundle.models.agent })}`}</div>
       <h2>{t(fact.summary)}</h2>
+      {isFirmImport(bundle) && <p className="muted small">{locale === 'fr' ? 'Citation retrouvée · sans confirmation juridique' : 'Quote matched · not legal confirmation'}</p>}
       {!fact.verified && <div className="callout amber">{t('Quote not found in the source — excluded from the chains.')}</div>}
       {fact.anchors.map((a) => (
         <figure key={a.quote} className="excerpt">
@@ -76,7 +78,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
         <section className={`qual ${q.source === 'ai_inferred' ? 'is-ai' : ''}`}>
           <div className="qual-head">
             <span className="section-label">{t('Legal qualification')}</span>
-            {q.source === 'ai_inferred' && <span className="ai-tag">{t('AI-inferred')}</span>}
+            {q.source === 'ai_inferred' && <span className="ai-tag">{isFirmImport(bundle) ? (locale === 'fr' ? 'Proposition importée' : 'Imported proposal') : t('AI-inferred')}</span>}
             {q.model && <span className="muted small">{t('Proposed by {model} · {confidence} confidence', { model: q.model, confidence: t(q.confidence) })}</span>}
             {q.fallback && <span className="qbadge unverified fallback-badge">{t('No AI answer — default shown')}</span>}
           </div>

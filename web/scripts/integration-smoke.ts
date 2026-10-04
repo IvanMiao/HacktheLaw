@@ -1,0 +1,28 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import assert from 'node:assert/strict';
+import { input } from '../server/integrations/contracts.fixture.js';
+const base='http://127.0.0.1:5175/api/v1';
+const token=process.env.DOMINO_INTEGRATION_KEY || (await readFile('.verification/integration-key.local','utf8')).trim();
+const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+const post=(path:string,data:unknown)=>fetch(base+path,{method:'POST',headers,body:JSON.stringify(data)});
+const evidence:Record<string,unknown>={providerCalls:0};
+evidence.authDenied=(await fetch(base+'/connections')).status;assert.equal(evidence.authDenied,401);
+evidence.foreignOriginDenied=(await fetch(base+'/connections',{headers:{...headers,Origin:'https://untrusted.example'}})).status;assert.equal(evidence.foreignOriginDenied,403);
+const metadata=await (await fetch(base+'/connections',{headers})).json();assert(!JSON.stringify(metadata).includes(token));assert(!JSON.stringify(metadata).includes('MISTRAL_API_KEY'));
+const matter={...input(),id:`http-smoke-${Date.now()}`};const accepted=await post('/cases',matter);assert.equal(accepted.status,201);
+const stored=await (await fetch(base+`/cases/${matter.id}`,{headers})).json();assert.equal(stored.bundle.id,matter.id);assert.equal(stored.bundle.facts[0].verified,true);
+const analysed=await post(`/cases/${matter.id}/analyse`,{mode:'deterministic'});assert.equal(analysed.status,200);const result=await analysed.json();assert.equal(result.state.decisions['qual-1'],'proposed');assert.match(result.memoMarkdown,/Defence memo/);
+const exported=await (await fetch(base+`/cases/${matter.id}/export`,{headers})).json();assert.deepEqual(exported,result);
+const database='.verification/firm-demo.sqlite';const before=createHash('sha256').update(await readFile(database)).digest('hex');
+const matters=await (await fetch(base+'/matters',{headers})).json();assert.equal(matters.matters[0].id,'demo-c1-c2');
+// Reproducible with a fresh server, while preserving a browser's existing live review.
+if(!metadata.cases.some((c:{id:string})=>c.id==='demo-c1-c2'))assert.equal((await post('/matters/demo-c1-c2/import',{})).status,201);
+if(!metadata.cases.some((c:{id:string;analysed:boolean})=>c.id==='demo-c1-c2'&&c.analysed))assert.equal((await post('/cases/demo-c1-c2/analyse',{mode:'deterministic'})).status,200);
+const sqliteCase=await (await fetch(base+'/cases/demo-c1-c2',{headers})).json();assert.equal(sqliteCase.bundle.docs.length,9);assert.equal(sqliteCase.bundle.facts.length,9);
+const sqliteExport=await (await fetch(base+'/cases/demo-c1-c2/export',{headers})).json();assert.deepEqual(Object.values(sqliteExport.state.decisions),Array(5).fill('proposed'));assert.deepEqual(sqliteExport.analysis.chains.map((c:{id:string})=>c.id),['C1','C2']);
+assert.equal(createHash('sha256').update(await readFile(database)).digest('hex'),before);
+const spec=await (await fetch(base+'/openapi',{headers})).json();assert.equal(spec.openapi,'3.1.0');
+Object.assign(evidence,{acceptedStatus:accepted.status,pushCaseId:matter.id,sqliteCaseId:'demo-c1-c2',sqliteDocuments:9,sqliteFacts:9,sqliteQualifications:5,allDecisionsProposed:true,chains:sqliteExport.analysis.chains.map((c:{id:string;status:string})=>({id:c.id,status:c.status})),sqliteUnchanged:true,selectedReviewProfile:sqliteExport.aiReview?.profileId,selectedReviewModel:sqliteExport.aiReview?.model,exportMatchesAnalysis:true,openapiOperations:Object.keys(spec.paths).length});
+await writeFile('.verification/http-integration-smoke.json',JSON.stringify(evidence,null,2));await writeFile('.verification/sqlite-export.json',JSON.stringify(sqliteExport,null,2));await writeFile('.verification/push-matter.json',JSON.stringify(matter,null,2));
+console.log(JSON.stringify(evidence,null,2));
