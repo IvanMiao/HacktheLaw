@@ -1,3 +1,5 @@
+import { useLocale } from './i18n/useLocale';
+import { LanguageSwitch } from './components/LanguageSwitch';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChainsView } from './components/Chains';
 import { FactDetail, FactList } from './components/Facts';
@@ -13,6 +15,7 @@ type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
+  const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
   const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode ? 'ready' : 'start');
@@ -31,8 +34,8 @@ export default function App() {
   const [viewerOpen, setViewerOpen] = useState(true);
   const [presenter, setPresenter] = useState(false);
 
-  const analysis = useMemo(() => analyse(state), [state]);
-  const cfs = useMemo(() => counterfactuals(state), [state]);
+  const analysis = useMemo(() => analyse(state, t), [state, t]);
+  const cfs = useMemo(() => counterfactuals(state, t), [state, t]);
   const quotesByDoc = useMemo(() => {
     const m: Record<string, string[]> = {};
     const add = (a: Anchor) => {
@@ -99,22 +102,23 @@ export default function App() {
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
-        <div className="case-name">{CASE.title} <span className="muted">· {CASE.court} · acting for the defendant</span></div>
-        <nav className="modes" aria-label="Mode">
+        <div className="case-name">{t(CASE.title)} <span className="muted">· {CASE.court} · {t('acting for the defendant')}</span></div>
+        <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([m, label], i) => (
-            <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{label}<kbd>{i + 1}</kbd></button>
+            <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{t(label)}<kbd>{i + 1}</kbd></button>
           ))}
         </nav>
-        <div className="asof mono">As of {long(CASE.asOf)}</div>
+        <LanguageSwitch />
+        <div className="asof mono">{t('As of')} {long(CASE.asOf, locale)}</div>
       </header>
 
       <div className={`banner ${grounds ? 'b-grounds' : 'b-none'}`} role="status">
         <span className="b-dot" />
-        <strong>{grounds ? `${grounds} independent ground${grounds > 1 ? 's' : ''} for inadmissibility` : 'No ground found in the 2 enabled chains'}</strong>
-        {contestedLinks > 0 && <span>· {contestedLinks} contested link{contestedLinks > 1 ? 's' : ''}</span>}
-        {pendingAi > 0 && <span className="b-prov">· Provisional — {pendingAi} AI qualification{pendingAi > 1 ? 's' : ''} awaiting review</span>}
-        {whatIf && <span className="b-whatif">· What-if scenario <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>reset</button></span>}
-        <span className="b-right mono">Next hearing {long(CASE.nextHearing)} · in {daysBetween(CASE.asOf, CASE.nextHearing)} days</span>
+        <strong>{grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds }) : t('No ground found in the 2 enabled chains')}</strong>
+        {contestedLinks > 0 && <span>· {t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
+        {pendingAi > 0 && <span className="b-prov">· {t(pendingAi === 1 ? 'Provisional — {count} AI qualification awaiting review' : 'Provisional — {count} AI qualifications awaiting review', { count: pendingAi })}</span>}
+        {whatIf && <span className="b-whatif">· {t('What-if scenario')} <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>{t('reset')}</button></span>}
+        <span className="b-right mono">{t('Next hearing {date} · in {days} days', { date: long(CASE.nextHearing, locale), days: daysBetween(CASE.asOf, CASE.nextHearing) })}</span>
       </div>
 
       <div className="body">
@@ -129,7 +133,7 @@ export default function App() {
         </main>
         {viewerOpen
           ? <aside className="col right"><SourceViewer docId={docId} onDoc={(id) => { setDocId(id); setAnchor(null); }} active={anchor} quotesByDoc={quotesByDoc} onCollapse={() => setViewerOpen(false)} /></aside>
-          : <button className="viewer-tab" onClick={() => setViewerOpen(true)}>Sources</button>}
+          : <button className="viewer-tab" onClick={() => setViewerOpen(true)}>{t('Sources')}</button>}
       </div>
     </div>
   );
