@@ -1,0 +1,1112 @@
+{
+  "id": "case-76751a45ef66",
+  "origin": "ai",
+  "provider": "openai",
+  "models": {
+    "agent": "gpt-6.1-sol",
+    "fast": "gpt-6-luna",
+    "ocr": "gpt-6.1-sol"
+  },
+  "generatedAt": "2026-10-04T13:02:57.085Z",
+  "usage": {
+    "gpt-6.1-sol": {
+      "input": 70518,
+      "output": 7256,
+      "reasoning": 383
+    }
+  },
+  "steps": 26,
+  "profile": {
+    "title": "Atelier Lumière SAS c/ Bâtiself SARL — facture F-2021-034",
+    "court": "Tribunal de commerce de Bordeaux",
+    "courtType": "tribunal_commerce",
+    "claimant": "ATELIER LUMIÈRE SAS",
+    "defendant": "BÂTISELF SARL",
+    "side": "Defendant (BÂTISELF SARL)",
+    "amount": "18 400,00 € TTC, outre intérêts au taux légal et 3 000 € article 700 CPC",
+    "relationship": "commercial",
+    "asOf": "2026-10-04",
+    "summary": {
+      "en": "Supplier seeks invoice payment from commercial customer; we represent defendant Bâtiself.",
+      "fr": "Le fournisseur réclame une facture au client commercial ; nous représentons la défenderesse Bâtiself."
+    },
+    "nextHearing": "2026-10-20"
+  },
+  "docs": [
+    {
+      "id": "contract",
+      "group": "case",
+      "title": "Contrat de fourniture et d’installation",
+      "short": "Contract",
+      "date": "2020-11-05",
+      "provenance": "mock",
+      "format": "text",
+      "text": "CONTRAT DE FOURNITURE ET D'INSTALLATION\n\nEntre les soussignés :\nATELIER LUMIÈRE SAS, 14 quai des Chartrons, 33000 Bordeaux, RCS Bordeaux 812 345 678, ci-après le « Fournisseur »,\nEt :\nBÂTISELF SARL, 3 rue du Port, 33130 Bègles, RCS Bordeaux 498 765 432, ci-après le « Client ».\n\nArticle 1 – Objet\nLe Fournisseur fournit et installe les luminaires du programme « Les Terrasses de Bègles ».\n\nArticle 6 – Prix et paiement\nLes factures sont payables à trente jours date de facture, par virement.\n\nArticle 14 – Conciliation préalable\nTout différend relatif à l'exécution du présent contrat sera soumis, préalablement à toute action judiciaire, à une tentative de conciliation. La partie la plus diligente saisit, par lettre recommandée avec accusé de réception, un conciliateur désigné d'un commun accord ou, à défaut, par le président de la Chambre de commerce et d'industrie de Bordeaux. Les parties disposent d'un délai d'un mois à compter de cette saisine pour parvenir à un accord.\n\nArticle 15 – Juridiction\nÀ défaut de conciliation, le litige sera porté devant le tribunal de commerce de Bordeaux.\n\nFait à Bordeaux, le 5 novembre 2020, en deux exemplaires.",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "contract"
+    },
+    {
+      "id": "invoice",
+      "group": "case",
+      "title": "Facture F-2021-034",
+      "short": "Invoice",
+      "date": "2021-02-13",
+      "provenance": "mock",
+      "format": "text",
+      "text": "ATELIER LUMIÈRE SAS\nFACTURE N° F-2021-034\n\nClient : BÂTISELF SARL — chantier « Les Terrasses de Bègles »\nDate de facture : 13/02/2021\nDate d'échéance : 15/03/2021\n\nFourniture et pose de 46 luminaires LED          15 333,33 €\nTVA 20 %                                          3 066,67 €\nTOTAL TTC                                        18 400,00 €\n\nConditions : paiement à 30 jours, par virement (IBAN FR76 ···· 4410).",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "invoice"
+    },
+    {
+      "id": "email",
+      "group": "case",
+      "title": "Courriel de M. Delorme (Bâtiself)",
+      "short": "Email",
+      "date": "2022-06-02",
+      "provenance": "mock",
+      "format": "text",
+      "text": "De : Marc Delorme <m.delorme@batiself.fr>\nÀ : Claire Roux <c.roux@atelier-lumiere.fr>\nDate : jeudi 2 juin 2022, 18:42\nObjet : RE: Facture F-2021-034 – relance\n\nBonjour Madame Roux,\n\nNous avons bien reçu votre relance. Le chantier des Terrasses a pris du retard et plusieurs luminaires font encore l'objet de réserves.\nNous allons étudier votre facture et revenons vers vous.\n\nCordialement,\nMarc Delorme\nGérant — Bâtiself SARL",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "correspondence"
+    },
+    {
+      "id": "notice",
+      "group": "case",
+      "title": "Mise en demeure (LRAR)",
+      "short": "Formal notice",
+      "date": "2023-02-10",
+      "provenance": "mock",
+      "format": "text",
+      "text": "ATELIER LUMIÈRE SAS\nLettre recommandée avec accusé de réception n° 1A 189 452 7731 2\n\nBordeaux, le 10 février 2023\n\nObjet : Mise en demeure — facture F-2021-034\n\nMadame, Monsieur,\nMalgré nos relances, la facture F-2021-034 d'un montant de 18 400,00 € TTC, échue le 15 mars 2021, demeure impayée.\nNous vous mettons en demeure de nous régler cette somme dans un délai de huit jours à compter de la réception de la présente, faute de quoi nous saisirons la juridiction compétente.\n\nClaire Roux, Directrice administrative et financière\n\n[Accusé de réception — distribué et signé le 13/02/2023]",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "formal_notice"
+    },
+    {
+      "id": "writ1",
+      "group": "case",
+      "title": "Assignation n° 1 — tribunal de commerce",
+      "short": "Writ #1",
+      "date": "2026-01-12",
+      "provenance": "mock",
+      "format": "text",
+      "text": "ASSIGNATION DEVANT LE TRIBUNAL DE COMMERCE DE BORDEAUX\n\nL'an deux mille vingt-six et le douze janvier,\nÀ la requête de : ATELIER LUMIÈRE SAS, 14 quai des Chartrons, 33000 Bordeaux,\nAyant pour avocat Maître Hélène Garnier, avocat au barreau de Bordeaux,\nJ'ai, Maître Paul Lestrade, commissaire de justice à Bordeaux, soussigné,\n\nDONNÉ ASSIGNATION À : BÂTISELF SARL, 3 rue du Port, 33130 Bègles,\n\nD'avoir à comparaître à l'audience du vendredi 20 février 2026 à 9h30 du tribunal de commerce de Bordeaux,\nsiégeant Palais de la Bourse, place de la Bourse, 33000 Bordeaux.\n\nOBJET DE LA DEMANDE\nCondamner la société Bâtiself au paiement de la somme de 18 400,00 € au titre de la facture F-2021-034, outre intérêts au taux légal.",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "writ"
+    },
+    {
+      "id": "registry",
+      "group": "case",
+      "title": "Tampon du greffe — remise de l’assignation",
+      "short": "Registry stamp",
+      "date": "2026-02-16",
+      "provenance": "mock",
+      "format": "text",
+      "text": "TRIBUNAL DE COMMERCE DE BORDEAUX — GREFFE\n\nENRÔLEMENT\nCopie de l'assignation remise au greffe le 16 février 2026\nRG n° 2026F00412\nDemandeur : ATELIER LUMIÈRE SAS\nDéfendeur : BÂTISELF SARL\nAudience : 20/02/2026 — 9h30 — Chambre 2\n\n[cachet du greffe]",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "registry_record"
+    },
+    {
+      "id": "order",
+      "group": "case",
+      "title": "Ordonnance de caducité",
+      "short": "Court order",
+      "date": "2026-02-20",
+      "provenance": "mock",
+      "format": "text",
+      "text": "TRIBUNAL DE COMMERCE DE BORDEAUX\nORDONNANCE DE CADUCITÉ\nRG n° 2026F00412 — Audience du 20 février 2026\n\nNous, président de la deuxième chambre,\nVu l'article 857 du code de procédure civile ;\nAttendu que l'assignation délivrée le 12 janvier 2026 à la requête de la société Atelier Lumière à la société Bâtiself fixait l'audience au 20 février 2026 ;\nAttendu que la copie de l'assignation n'a été remise au greffe que le 16 février 2026, soit moins de huit jours avant la date de l'audience ;\nPAR CES MOTIFS,\nConstatons la caducité de l'assignation.\n\nFait à Bordeaux, le 20 février 2026.",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "court_order"
+    },
+    {
+      "id": "writ2",
+      "group": "case",
+      "title": "Assignation n° 2 — tribunal de commerce",
+      "short": "Writ #2",
+      "date": "2026-04-08",
+      "provenance": "mock",
+      "format": "text",
+      "text": "ASSIGNATION DEVANT LE TRIBUNAL DE COMMERCE DE BORDEAUX\n\nL'an deux mille vingt-six et le huit avril,\nÀ la requête de : ATELIER LUMIÈRE SAS, 14 quai des Chartrons, 33000 Bordeaux,\nAyant pour avocat Maître Hélène Garnier, avocat au barreau de Bordeaux,\nJ'ai, Maître Paul Lestrade, commissaire de justice à Bordeaux, soussigné,\n\nDONNÉ ASSIGNATION À : BÂTISELF SARL, 3 rue du Port, 33130 Bègles,\n\nD'avoir à comparaître à l'audience du mardi 20 octobre 2026 à 9h30 du tribunal de commerce de Bordeaux.\n\nOBJET DE LA DEMANDE\nCondamner la société Bâtiself au paiement de la somme de 18 400,00 € au titre de la facture F-2021-034, outre intérêts au taux légal et 3 000 € au titre de l'article 700 du code de procédure civile.\n\n[Copie remise au greffe le 15 avril 2026 — RG n° 2026F01187]",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "writ"
+    },
+    {
+      "id": "pieces",
+      "group": "case",
+      "title": "Bordereau des pièces communiquées (assignation n° 2)",
+      "short": "List of exhibits",
+      "date": "2026-04-08",
+      "provenance": "mock",
+      "format": "text",
+      "text": "BORDEREAU DES PIÈCES COMMUNIQUÉES\nannexé à l'assignation du 8 avril 2026 — Atelier Lumière c/ Bâtiself\n\nPièce n° 1 : Contrat de fourniture et d'installation du 5 novembre 2020\nPièce n° 2 : Facture F-2021-034 du 13 février 2021\nPièce n° 3 : Courriel de M. Delorme du 2 juin 2022\nPièce n° 4 : Mise en demeure du 10 février 2023 et accusé de réception\nPièce n° 5 : Extrait Kbis de la société Bâtiself\nPièce n° 6 : Décompte des sommes dues",
+      "note": "Synthetic case document — fictitious parties.",
+      "docType": "exhibits_list"
+    }
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "date": "2020-11-05",
+      "doc": "contract",
+      "kind": "Contract",
+      "summary": {
+        "en": "Contract requires conciliation before litigation, with jointly designated conciliator or Bordeaux Chamber president designation.",
+        "fr": "Le contrat impose une conciliation préalable, avec conciliateur choisi conjointement ou désigné par la CCI."
+      },
+      "anchors": [
+        {
+          "doc": "contract",
+          "quote": "Tout différend relatif à l'exécution du présent contrat sera soumis, préalablement à toute action judiciaire, à une tentative de conciliation.",
+          "verified": true
+        },
+        {
+          "doc": "contract",
+          "quote": "Les parties disposent d'un délai d'un mois à compter de cette saisine pour parvenir à un accord.",
+          "verified": true
+        }
+      ],
+      "role": "conciliation_clause",
+      "attrs": {},
+      "verified": true,
+      "qualification": "q-conciliation_clause-f1"
+    },
+    {
+      "id": "f2",
+      "date": "2021-03-15",
+      "doc": "invoice",
+      "kind": "Invoice",
+      "summary": {
+        "en": "Invoice F-2021-034 for €18,400 including tax fell due on 15 March 2021.",
+        "fr": "La facture F-2021-034 de 18 400 € TTC était exigible le 15 mars 2021."
+      },
+      "anchors": [
+        {
+          "doc": "invoice",
+          "quote": "Date de facture : 13/02/2021\nDate d'échéance : 15/03/2021",
+          "verified": true
+        },
+        {
+          "doc": "invoice",
+          "quote": "TOTAL TTC                                        18 400,00 €\n\nConditions : paiement à 30 jours, par virement",
+          "verified": true
+        }
+      ],
+      "role": "limitation_start",
+      "attrs": {
+        "amountEur": 18400
+      },
+      "verified": true
+    },
+    {
+      "id": "f3",
+      "date": "2022-06-02",
+      "doc": "email",
+      "kind": "Email",
+      "summary": {
+        "en": "Debtor mentions project delays and luminaire reservations, promising to examine the invoice.",
+        "fr": "Le débiteur évoque retards et réserves sur des luminaires, promettant d'étudier la facture."
+      },
+      "anchors": [
+        {
+          "doc": "email",
+          "quote": "Le chantier des Terrasses a pris du retard et plusieurs luminaires font encore l'objet de réserves.",
+          "verified": true
+        },
+        {
+          "doc": "email",
+          "quote": "Nous allons étudier votre facture et revenons vers vous.",
+          "verified": true
+        }
+      ],
+      "role": "debtor_communication",
+      "attrs": {},
+      "verified": true,
+      "qualification": "q-acknowledgment-f3"
+    },
+    {
+      "id": "f4",
+      "date": "2023-02-10",
+      "doc": "notice",
+      "kind": "Formal notice",
+      "summary": {
+        "en": "Payment demanded within eight days of receipt; registered letter received on 13 February 2023.",
+        "fr": "Paiement demandé sous huit jours après réception ; lettre recommandée reçue le 13 février 2023."
+      },
+      "anchors": [
+        {
+          "doc": "notice",
+          "quote": "Malgré nos relances, la facture F-2021-034 d'un montant de 18 400,00 € TTC, échue le 15 mars 2021, demeure impayée.",
+          "verified": true
+        },
+        {
+          "doc": "notice",
+          "quote": "[Accusé de réception — distribué et signé le 13/02/2023]",
+          "verified": true
+        }
+      ],
+      "role": "formal_notice",
+      "attrs": {
+        "amountEur": 18400
+      },
+      "verified": true,
+      "qualification": "q-formal_notice-f4"
+    },
+    {
+      "id": "f5",
+      "date": "2026-01-12",
+      "doc": "writ1",
+      "kind": "Writ",
+      "summary": {
+        "en": "First writ seeks €18,400 plus statutory interest; hearing scheduled for 20 February 2026.",
+        "fr": "Première assignation réclamant 18 400 € et intérêts légaux ; audience fixée au 20 février 2026."
+      },
+      "anchors": [
+        {
+          "doc": "writ1",
+          "quote": "L'an deux mille vingt-six et le douze janvier,",
+          "verified": true
+        },
+        {
+          "doc": "writ1",
+          "quote": "D'avoir à comparaître à l'audience du vendredi 20 février 2026 à 9h30 du tribunal de commerce de Bordeaux,",
+          "verified": true
+        }
+      ],
+      "role": "writ",
+      "attrs": {
+        "servedAt": "2026-01-12",
+        "hearingDate": "2026-02-20",
+        "amountEur": 18400
+      },
+      "verified": true
+    },
+    {
+      "id": "f8",
+      "date": "2026-02-16",
+      "doc": "registry",
+      "kind": "Registry",
+      "summary": {
+        "en": "First writ filed on 16 February 2026, RG 2026F00412, for 20 February hearing.",
+        "fr": "Première assignation remise le 16 février 2026, RG 2026F00412 ; audience du 20 février 2026."
+      },
+      "anchors": [
+        {
+          "doc": "registry",
+          "quote": "Copie de l'assignation remise au greffe le 16 février 2026",
+          "verified": true
+        },
+        {
+          "doc": "registry",
+          "quote": "RG n° 2026F00412\nDemandeur : ATELIER LUMIÈRE SAS\nDéfendeur : BÂTISELF SARL\nAudience : 20/02/2026",
+          "verified": true
+        }
+      ],
+      "role": "writ_placement",
+      "attrs": {
+        "hearingDate": "2026-02-20",
+        "placedAt": "2026-02-16",
+        "writFactId": "f5"
+      },
+      "verified": true
+    },
+    {
+      "id": "f9",
+      "date": "2026-02-20",
+      "doc": "order",
+      "kind": "Court order",
+      "summary": {
+        "en": "Court declares first writ caducity because filing occurred less than eight days before hearing.",
+        "fr": "Le tribunal constate la caducité pour remise moins de huit jours avant l'audience."
+      },
+      "anchors": [
+        {
+          "doc": "order",
+          "quote": "ORDONNANCE DE CADUCITÉ\nRG n° 2026F00412 — Audience du 20 février 2026",
+          "verified": true
+        },
+        {
+          "doc": "order",
+          "quote": "PAR CES MOTIFS,\nConstatons la caducité de l'assignation.\n\nFait à Bordeaux, le 20 février 2026.",
+          "verified": true
+        }
+      ],
+      "role": "writ_sanction",
+      "attrs": {
+        "writFactId": "f5"
+      },
+      "verified": true,
+      "qualification": "q-writ_outcome-f9"
+    },
+    {
+      "id": "f6",
+      "date": "2026-04-08",
+      "doc": "writ2",
+      "kind": "Writ",
+      "summary": {
+        "en": "Second writ seeks €18,400, statutory interest and €3,000 costs; hearing 20 October 2026.",
+        "fr": "Seconde assignation : 18 400 €, intérêts, article 700 ; audience du 20 octobre 2026."
+      },
+      "anchors": [
+        {
+          "doc": "writ2",
+          "quote": "L'an deux mille vingt-six et le huit avril,",
+          "verified": true
+        },
+        {
+          "doc": "writ2",
+          "quote": "D'avoir à comparaître à l'audience du mardi 20 octobre 2026 à 9h30 du tribunal de commerce de Bordeaux.",
+          "verified": true
+        },
+        {
+          "doc": "writ2",
+          "quote": "outre intérêts au taux légal et 3 000 € au titre de l'article 700 du code de procédure civile.",
+          "verified": true
+        }
+      ],
+      "role": "writ",
+      "attrs": {
+        "servedAt": "2026-04-08",
+        "hearingDate": "2026-10-20",
+        "amountEur": 18400
+      },
+      "verified": true
+    },
+    {
+      "id": "f7",
+      "date": "2026-04-08",
+      "doc": "pieces",
+      "kind": "Exhibits",
+      "summary": {
+        "en": "Lists contract, invoice, Delorme email, formal notice with receipt, Bâtiself Kbis, and debt breakdown.",
+        "fr": "Liste contrat, facture, courriel Delorme, mise en demeure et AR, Kbis Bâtiself, décompte des sommes."
+      },
+      "anchors": [
+        {
+          "doc": "pieces",
+          "quote": "Pièce n° 1 : Contrat de fourniture et d'installation du 5 novembre 2020",
+          "verified": true
+        },
+        {
+          "doc": "pieces",
+          "quote": "Pièce n° 4 : Mise en demeure du 10 février 2023 et accusé de réception",
+          "verified": true
+        },
+        {
+          "doc": "pieces",
+          "quote": "Pièce n° 5 : Extrait Kbis de la société Bâtiself\nPièce n° 6 : Décompte des sommes dues",
+          "verified": true
+        }
+      ],
+      "role": "exhibits_list",
+      "attrs": {},
+      "verified": true,
+      "qualification": "q-conciliation_attempted-f7"
+    },
+    {
+      "id": "f10",
+      "date": "2026-04-15",
+      "doc": "writ2",
+      "kind": "Registry",
+      "summary": {
+        "en": "Second writ filed on 15 April 2026 under RG 2026F01187.",
+        "fr": "Seconde assignation remise au greffe le 15 avril 2026, sous RG 2026F01187."
+      },
+      "anchors": [
+        {
+          "doc": "writ2",
+          "quote": "[Copie remise au greffe le 15 avril 2026 — RG n° 2026F01187]",
+          "verified": true
+        }
+      ],
+      "role": "writ_placement",
+      "attrs": {
+        "hearingDate": "2026-10-20",
+        "placedAt": "2026-04-15",
+        "writFactId": "f6"
+      },
+      "verified": true
+    }
+  ],
+  "qualifications": [
+    {
+      "id": "q-conciliation_clause-f1",
+      "kind": "conciliation_clause",
+      "factId": "f1",
+      "question": {
+        "en": "Is the clause of 05/11/2020 a mandatory prior-conciliation clause?",
+        "fr": "La clause du 05/11/2020 est-elle une clause de conciliation préalable obligatoire ?"
+      },
+      "proposed": true,
+      "yes": {
+        "en": "Mandatory prior-conciliation clause",
+        "fr": "Clause de conciliation préalable obligatoire"
+      },
+      "no": {
+        "en": "Not a mandatory clause",
+        "fr": "Clause non obligatoire"
+      },
+      "source": "ai_inferred",
+      "confidence": "high",
+      "rule": "Cass. ch. mixte, 14 Feb 2003",
+      "reasoning": {
+        "en": "Article 14 makes an attempted conciliation mandatory before court proceedings concerning contractual performance: « sera soumis, préalablement à toute action judiciaire », which covers the invoice-payment dispute. It specifies who is seised (a jointly appointed conciliator or, failing agreement, one appointed by the president of the Bordeaux Chamber of Commerce and Industry), how (registered letter with acknowledgment of receipt, sent by the more diligent party), and the time limit (« un délai d'un mois à compter de cette saisine »); Article 15 reinforces this sequence. Atelier Lumière could argue that « tentative » merely encourages amicable settlement or that the designation procedure lacks detail, but those objections are weak given the imperative wording and operational arrangements, and the file search disclosed no contrary provision.",
+        "fr": "L'article 14 impose une tentative de conciliation avant toute action relative à l'exécution du contrat : « sera soumis, préalablement à toute action judiciaire », ce qui couvre le litige en paiement de la facture. Il précise qui est saisi (un conciliateur désigné d'un commun accord ou, à défaut, par le président de la Chambre de commerce et d'industrie de Bordeaux), comment (lettre recommandée avec accusé de réception par la partie la plus diligente) et le délai (« un délai d'un mois à compter de cette saisine ») ; l'article 15 confirme cet ordre procédural. Atelier Lumière pourrait soutenir que le mot « tentative » n'exprime qu'une invitation amiable ou que la procédure de désignation manque de détails, mais ces objections sont faibles au regard de la formulation impérative et des modalités prévues, et la recherche dans le dossier n'a révélé aucune stipulation contraire."
+      },
+      "whatIfLabel": {
+        "en": "The clause is not mandatory",
+        "fr": "La clause n’est pas obligatoire"
+      },
+      "anchors": [
+        {
+          "doc": "contract",
+          "quote": "Tout différend relatif à l'exécution du présent contrat sera soumis, préalablement à toute action judiciaire, à une tentative de conciliation. La partie la plus diligente saisit, par lettre recommandée avec accusé de réception, un conciliateur désigné d'un commun accord ou, à défaut, par le président de la Chambre de commerce et d'industrie de Bordeaux. Les parties disposent d'un délai d'un mois à compter de cette saisine pour parvenir à un accord.",
+          "verified": true
+        },
+        {
+          "doc": "contract",
+          "quote": "À défaut de conciliation, le litige sera porté devant le tribunal de commerce de Bordeaux.",
+          "verified": true
+        },
+        {
+          "doc": "cass2003",
+          "quote": "Il résulte des articles 122 et 124 du nouveau Code de procédure civile que les fins de non-recevoir ne sont pas limitativement énumérées ; que, licite, la clause d'un contrat instituant une procédure de conciliation obligatoire et préalable à la saisine du juge, dont la mise en œuvre suspend jusqu'à son issue le cours de la prescription, constitue une fin de non-recevoir qui s'impose au juge si les parties l'invoquent",
+          "verified": true
+        }
+      ],
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "q-acknowledgment-f3",
+      "kind": "acknowledgment",
+      "factId": "f3",
+      "question": {
+        "en": "Is the communication of 02/06/2022 an acknowledgment of debt (art. 2240 C. civ.)?",
+        "fr": "La communication du 02/06/2022 vaut-elle reconnaissance de dette (art. 2240 C. civ.) ?"
+      },
+      "proposed": false,
+      "yes": {
+        "en": "Acknowledgment of debt — interrupts",
+        "fr": "Reconnaissance de dette — interruptive"
+      },
+      "no": {
+        "en": "Not an acknowledgment — no effect",
+        "fr": "Pas une reconnaissance — sans effet"
+      },
+      "source": "ai_inferred",
+      "confidence": "medium",
+      "rule": "art. 2240 C. civ.",
+      "reasoning": {
+        "en": "The proposed qualification is that this email does not unequivocally acknowledge Atelier Lumière's right: « Nous allons étudier votre facture » promises examination, not payment or acceptance of the debt, while « plusieurs luminaires font encore l'objet de réserves » preserves objections. The creditor could argue that the reference to project delays explains deferred payment rather than denying liability, but the email as a whole leaves the invoice subject to review. The later demand confirms non-payment, not an acknowledgment by Bâtiself; on the documents reviewed, interruption under Article 2240 is therefore not established by this communication.",
+        "fr": "La qualification proposée est que ce courriel ne reconnaît pas sans équivoque le droit d'Atelier Lumière : « Nous allons étudier votre facture » annonce un examen, non un paiement ou une acceptation de la dette, tandis que « plusieurs luminaires font encore l'objet de réserves » maintient des objections. La créancière pourrait soutenir que le retard du chantier explique seulement un paiement différé sans nier la dette, mais le courriel, pris dans son ensemble, laisse la facture soumise à examen. La mise en demeure ultérieure confirme l'impayé, non une reconnaissance par Bâtiself ; au vu des documents examinés, l'interruption prévue par l'article 2240 n'est donc pas établie par cette communication."
+      },
+      "whatIfLabel": {
+        "en": "The communication of {date} is an acknowledgment of debt",
+        "fr": "La communication du {date} vaut reconnaissance de dette"
+      },
+      "anchors": [
+        {
+          "doc": "email",
+          "quote": "Nous avons bien reçu votre relance. Le chantier des Terrasses a pris du retard et plusieurs luminaires font encore l'objet de réserves.\nNous allons étudier votre facture et revenons vers vous.",
+          "verified": true
+        },
+        {
+          "doc": "civ",
+          "quote": "Article 2240\nLa reconnaissance par le débiteur du droit de celui contre lequel il prescrivait interrompt le délai de prescription.",
+          "verified": true
+        },
+        {
+          "doc": "notice",
+          "quote": "Malgré nos relances, la facture F-2021-034 d'un montant de 18 400,00 € TTC, échue le 15 mars 2021, demeure impayée.",
+          "verified": true
+        }
+      ],
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "q-formal_notice-f4",
+      "kind": "formal_notice",
+      "factId": "f4",
+      "question": {
+        "en": "Does the formal notice of 10/02/2023 interrupt the limitation period?",
+        "fr": "La mise en demeure du 10/02/2023 interrompt-elle la prescription ?"
+      },
+      "proposed": false,
+      "yes": {
+        "en": "Interrupts",
+        "fr": "Interruptive"
+      },
+      "no": {
+        "en": "Does not interrupt",
+        "fr": "Non interruptive"
+      },
+      "source": "rule",
+      "confidence": "high",
+      "rule": "arts. 2240–2244 C. civ. (exhaustive list)",
+      "reasoning": {
+        "en": "The letter demands payment within eight days and merely threatens proceedings: « faute de quoi nous saisirons la juridiction compétente »; it is neither a judicial claim nor a conservatory measure or enforcement act under articles 2240–2246 C. civ. The entry « distribué et signé le 13/02/2023 » proves receipt, not the debtor's acknowledgment of the creditor's right under article 2240. Atelier Lumière could invoke a separate acknowledgment or judicial claim, but neither the signed receipt nor the earlier email stating « Nous allons étudier votre facture » makes this formal notice itself interrupt limitation.",
+        "fr": "La lettre exige le paiement sous huit jours et menace seulement d'une action : « faute de quoi nous saisirons la juridiction compétente » ; elle ne constitue ni une demande en justice, ni une mesure conservatoire ou un acte d'exécution forcée au sens des articles 2240–2246 du Code civil. La mention « distribué et signé le 13/02/2023 » établit la réception, non une reconnaissance par le débiteur du droit du créancier au sens de l'article 2240. Atelier Lumière pourrait invoquer une reconnaissance ou une demande en justice distincte, mais ni l'accusé signé ni le courriel antérieur indiquant « Nous allons étudier votre facture » ne confèrent à cette mise en demeure elle-même un effet interruptif."
+      },
+      "whatIfLabel": {
+        "en": "The formal notice interrupts",
+        "fr": "La mise en demeure est interruptive"
+      },
+      "anchors": [
+        {
+          "doc": "notice",
+          "quote": "Nous vous mettons en demeure de nous régler cette somme dans un délai de huit jours à compter de la réception de la présente, faute de quoi nous saisirons la juridiction compétente.",
+          "verified": true
+        },
+        {
+          "doc": "notice",
+          "quote": "[Accusé de réception — distribué et signé le 13/02/2023]",
+          "verified": true
+        },
+        {
+          "doc": "civ",
+          "quote": "Article 2240\nLa reconnaissance par le débiteur du droit de celui contre lequel il prescrivait interrompt le délai de prescription.",
+          "verified": true
+        }
+      ],
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "q-writ_outcome-f9",
+      "kind": "writ_outcome",
+      "factId": "f9",
+      "question": {
+        "en": "What happened to the writ of 12/01/2026?",
+        "fr": "Qu’est devenue l’assignation du 12/01/2026 ?"
+      },
+      "proposed": true,
+      "yes": {
+        "en": "Lapsed (caducité)",
+        "fr": "Caduque"
+      },
+      "no": {
+        "en": "Annulled (nullité)",
+        "fr": "Annulée (nullité)"
+      },
+      "source": "rule",
+      "confidence": "high",
+      "rule": "Article 857 du code de procédure civile, expressément visé par l'ordonnance : la copie de l'assignation doit être remise au greffe au plus tard huit jours avant la date de l'audience, sous peine de caducité de l'assignation constatée d'office par ordonnance du président ou du juge saisi.",
+      "reasoning": {
+        "en": "The decision expressly states “Constatons la caducité de l'assignation.” It relies on Article 857 of the Code of Civil Procedure because the copy was filed on 16 February 2026 for the hearing on 20 February 2026, “soit moins de huit jours avant la date de l'audience”. The registry record confirms that filing date; the sanction applied is caducité, not nullité.",
+        "fr": "Le dispositif énonce expressément : « Constatons la caducité de l'assignation. » La décision se fonde sur l'article 857 du code de procédure civile, la copie ayant été remise au greffe le 16 février 2026 pour l'audience du 20 février 2026, « soit moins de huit jours avant la date de l'audience ». Le document d'enrôlement confirme cette date de remise ; la sanction appliquée est donc la caducité, et non la nullité."
+      },
+      "whatIfLabel": {
+        "en": "The writ was annulled, not lapsed",
+        "fr": "L’assignation a été annulée, non caduque"
+      },
+      "anchors": [
+        {
+          "doc": "order",
+          "quote": "Vu l'article 857 du code de procédure civile ;",
+          "verified": true
+        },
+        {
+          "doc": "order",
+          "quote": "Attendu que la copie de l'assignation n'a été remise au greffe que le 16 février 2026, soit moins de huit jours avant la date de l'audience ;\nPAR CES MOTIFS,\nConstatons la caducité de l'assignation.",
+          "verified": true
+        },
+        {
+          "doc": "cpc",
+          "quote": "Cette remise doit avoir lieu au plus tard huit jours avant la date de l'audience, sous peine de caducité de l'assignation constatée d'office par ordonnance du président ou du juge saisi.",
+          "verified": true
+        }
+      ],
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "q-conciliation_attempted-f7",
+      "kind": "conciliation_attempted",
+      "factId": "f7",
+      "question": {
+        "en": "Was conciliation attempted before the writ?",
+        "fr": "Une conciliation a-t-elle été tentée avant l’assignation ?"
+      },
+      "proposed": true,
+      "yes": {
+        "en": "No attempt on file",
+        "fr": "Aucune tentative au dossier"
+      },
+      "no": {
+        "en": "Conciliation attempted beforehand",
+        "fr": "Conciliation tentée au préalable"
+      },
+      "source": "rule",
+      "confidence": "high",
+      "rule": "Required document not found",
+      "reasoning": {
+        "en": "The search of the available file, including the complete exhibit list, correspondence and both writs, found no document recording a referral to a conciliator, conciliation meeting or report before either the 12 January or 8 April 2026 writ. Article 14 requires that the diligent party « saisit, par lettre recommandée avec accusé de réception, un conciliateur », whereas the registered letter of 10 February 2023 only demands payment within eight days, « faute de quoi nous saisirons la juridiction compétente ». Atelier Lumière could invoke its reminders and Delorme’s reply as amicable exchanges, but neither records an attempt through the third party required by the clause. Thus attempt_found is false on the available documents, without establishing that no undocumented attempt ever occurred.",
+        "fr": "La recherche dans le dossier disponible, comprenant le bordereau intégral, les correspondances et les deux assignations, ne révèle aucun document relatant une saisine d’un conciliateur, une réunion ou un rapport de conciliation avant les assignations des 12 janvier et 8 avril 2026. L’article 14 exige que la partie diligente « saisit, par lettre recommandée avec accusé de réception, un conciliateur », tandis que la lettre recommandée du 10 février 2023 exige seulement un paiement sous huit jours, « faute de quoi nous saisirons la juridiction compétente ». Atelier Lumière pourrait invoquer ses relances et la réponse de Delorme comme échanges amiables, mais aucun ne relate une tentative auprès du tiers prévu par la clause. Le champ attempt_found est donc faux au vu des documents disponibles, sans que cela établisse qu’aucune tentative non documentée n’a jamais eu lieu."
+      },
+      "whatIfLabel": {
+        "en": "Conciliation was attempted before the writ",
+        "fr": "Une conciliation a été tentée avant l’assignation"
+      },
+      "anchors": [
+        {
+          "doc": "contract",
+          "quote": "Tout différend relatif à l'exécution du présent contrat sera soumis, préalablement à toute action judiciaire, à une tentative de conciliation. La partie la plus diligente saisit, par lettre recommandée avec accusé de réception, un conciliateur désigné d'un commun accord ou, à défaut, par le président de la Chambre de commerce et d'industrie de Bordeaux. Les parties disposent d'un délai d'un mois à compter de cette saisine pour parvenir à un accord.",
+          "verified": true
+        },
+        {
+          "doc": "notice",
+          "quote": "Nous vous mettons en demeure de nous régler cette somme dans un délai de huit jours à compter de la réception de la présente, faute de quoi nous saisirons la juridiction compétente.",
+          "verified": true
+        },
+        {
+          "doc": "pieces",
+          "quote": "Pièce n° 1 : Contrat de fourniture et d'installation du 5 novembre 2020\nPièce n° 2 : Facture F-2021-034 du 13 février 2021\nPièce n° 3 : Courriel de M. Delorme du 2 juin 2022\nPièce n° 4 : Mise en demeure du 10 février 2023 et accusé de réception\nPièce n° 5 : Extrait Kbis de la société Bâtiself\nPièce n° 6 : Décompte des sommes dues",
+          "verified": true
+        }
+      ],
+      "model": "gpt-6.1-sol"
+    }
+  ],
+  "trace": [
+    {
+      "at": 1791118852443,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document contract"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document invoice"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document email"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document notice"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document writ1"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document registry"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document order"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document writ2"
+    },
+    {
+      "at": 1791118852444,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "read_document pieces"
+    },
+    {
+      "at": 1791118856130,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "search \"échéance conciliation greffe caducité janvier avril février réception\""
+    },
+    {
+      "at": 1791118862427,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "set_case_profile ✓"
+    },
+    {
+      "at": 1791118881243,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact conciliation_clause 2020-11-05 ✓"
+    },
+    {
+      "at": 1791118881244,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact limitation_start 2021-03-15 ✓"
+    },
+    {
+      "at": 1791118881245,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact debtor_communication 2022-06-02 ✓"
+    },
+    {
+      "at": 1791118881246,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact formal_notice 2023-02-10 ✓"
+    },
+    {
+      "at": 1791118881247,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact writ 2026-01-12 ✓"
+    },
+    {
+      "at": 1791118881249,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact writ 2026-04-08 ✓"
+    },
+    {
+      "at": 1791118881250,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact exhibits_list 2026-04-08 ✓"
+    },
+    {
+      "at": 1791118895626,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact writ_placement 2026-02-16 ✓"
+    },
+    {
+      "at": 1791118895627,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact writ_sanction 2026-02-20 ✓"
+    },
+    {
+      "at": 1791118895627,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "record_fact writ_placement 2026-04-15 ✓"
+    },
+    {
+      "at": 1791118895629,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "update_fact writ 2026-04-08 ✓"
+    },
+    {
+      "at": 1791118901950,
+      "stage": "extract",
+      "kind": "tool",
+      "text": "finish ✓"
+    },
+    {
+      "at": 1791118904987,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: search_documents \"contract conciliation conciliateur Bordeaux\""
+    },
+    {
+      "at": 1791118905247,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: read_document"
+    },
+    {
+      "at": 1791118907314,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: search_documents \"02/06/2022 Terrasses étudier facture F-2021-034\""
+    },
+    {
+      "at": 1791118909157,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: read_document"
+    },
+    {
+      "at": 1791118909731,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: search_documents \"F-2021-034 reconnaissance dette paiement mise en demeure 13/02/2023 prescription\""
+    },
+    {
+      "at": 1791118912156,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: search_library \"2240 reconnaissance non équivoque étudier facture réserves prescription\""
+    },
+    {
+      "at": 1791118914543,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: search_documents \"conciliation article 14 saisine tentative\""
+    },
+    {
+      "at": 1791118914903,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: read_document"
+    },
+    {
+      "at": 1791118916919,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: search_library \"Code civil articles 2240 2241 2242 2243 2244 2245 2246 mise en demeure interrupt\""
+    },
+    {
+      "at": 1791118919312,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: search_library \"clause conciliation obligatoire préalable modalités mise en oeuvre fin de non re\""
+    },
+    {
+      "at": 1791118919879,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: read_document"
+    },
+    {
+      "at": 1791118921729,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: search_documents \"reconnaissance paiement réserves facture dette juin 2022\""
+    },
+    {
+      "at": 1791118923307,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: read_document"
+    },
+    {
+      "at": 1791118924151,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: search_documents \"mise en demeure interruption prescription reconnaissance Delorme juin 2022\""
+    },
+    {
+      "at": 1791118924151,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: read_document"
+    },
+    {
+      "at": 1791118926577,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: search_library \"reconnaissance non équivoque débiteur droit créancier article 2240\""
+    },
+    {
+      "at": 1791118926924,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: read_document"
+    },
+    {
+      "at": 1791118928949,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: search_library \"conciliation modalités particulières mise en œuvre obligatoire précision 29 avri\""
+    },
+    {
+      "at": 1791118929573,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: read_document"
+    },
+    {
+      "at": 1791118929573,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: read_document"
+    },
+    {
+      "at": 1791118929573,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: read_document"
+    },
+    {
+      "at": 1791118931340,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: search_library \"2244 2245 2246 mise en demeure lettre recommandée prescription\""
+    },
+    {
+      "at": 1791118934665,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: search_documents \"conciliation amiable conciliateur dispense avenant\""
+    },
+    {
+      "at": 1791118934665,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: read_document"
+    },
+    {
+      "at": 1791118934665,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: read_document"
+    },
+    {
+      "at": 1791118939095,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "acknowledgment: answer"
+    },
+    {
+      "at": 1791118941304,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "formal_notice: answer"
+    },
+    {
+      "at": 1791118941654,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: search_documents \"2026F00412 ordonnance caducité 20 février 2026\""
+    },
+    {
+      "at": 1791118944066,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: search_documents \"\""
+    },
+    {
+      "at": 1791118945120,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: read_document"
+    },
+    {
+      "at": 1791118946475,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: search_documents \"caducité nullité assignation 16 février 2026 huit jours\""
+    },
+    {
+      "at": 1791118948880,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: search_library \"article 857 code procédure civile huit jours caducité assignation tribunal comme\""
+    },
+    {
+      "at": 1791118948936,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_clause: answer"
+    },
+    {
+      "at": 1791118951258,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: search_documents \"conciliation conciliateur amiable réunion procès-verbal pièces mise en demeure D\""
+    },
+    {
+      "at": 1791118951258,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118951258,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118951403,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: read_document"
+    },
+    {
+      "at": 1791118951403,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: read_document"
+    },
+    {
+      "at": 1791118953715,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: search_library \"clause conciliation obligatoire préalable mise en demeure tentative fin de non r\""
+    },
+    {
+      "at": 1791118956064,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: search_documents \"ordonnance caducité rétractation délai article 857\""
+    },
+    {
+      "at": 1791118958898,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118958898,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118958898,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118958898,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118958898,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118959354,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: search_documents \"lettre recommandée saisine conciliateur accord réunion rapport procès-verbal con\""
+    },
+    {
+      "at": 1791118961766,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: search_documents \"facture décompte Kbis accusé réception\""
+    },
+    {
+      "at": 1791118961766,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: read_document"
+    },
+    {
+      "at": 1791118963698,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "writ_outcome: answer"
+    },
+    {
+      "at": 1791118977082,
+      "stage": "qualify",
+      "kind": "tool",
+      "text": "conciliation_attempted: answer"
+    },
+    {
+      "at": 1791118977086,
+      "stage": "engine",
+      "kind": "note",
+      "text": "C1 contested · C2 contested"
+    }
+  ]
+}

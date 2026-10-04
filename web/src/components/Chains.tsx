@@ -1,6 +1,6 @@
 import { useLocale } from '../i18n/useLocale';
 import type { CSSProperties } from 'react';
-import type { Anchor } from '../data/case';
+import type { Anchor } from '../data/bundle';
 import type { Analysis, AnalysisState, ChainResult, ChainStatus, Counterfactual, Link, NodeKind } from '../engine/chains';
 import { REGIMES } from '../engine/regimes';
 import { DeadlineTrack } from './DeadlineTrack';
@@ -12,7 +12,7 @@ const KIND: Record<NodeKind, string> = {
   lost_effect: 'Lost effect', consequence: 'Consequence', outcome: 'Outcome',
 };
 
-const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken' };
+const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken', not_applicable: 'Not applicable' };
 
 export function StatusPill({ status }: { status: ChainStatus }) {
   const { t } = useLocale();
@@ -62,7 +62,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
 
 function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
   const { t } = useLocale();
-  const standing = chain.status !== 'fails';
+  const standing = chain.status === 'holds' || chain.status === 'contested';
   const broken = chain.links.find((l) => l.status === 'broken');
   return (
     <section className={`lane lane-${chain.status}`}>
@@ -70,10 +70,12 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
         <span className="lane-id mono">{chain.id}</span>
         <div className="lane-title">
           <h3>{chain.title}</h3>
-          <p className="muted small">{chain.subtitle}</p>
+          {chain.status !== 'not_applicable' && <p className="muted small">{chain.subtitle}</p>}
         </div>
         <StatusPill status={chain.status} />
       </header>
+      {chain.status === 'not_applicable' && <p className="lane-note">{chain.missing?.join('; ')}</p>}
+      {chain.status !== 'not_applicable' && <>
       <ol className="tiles" style={{ gridTemplateColumns: `repeat(${chain.links.length}, minmax(0, 1fr))` }}>
         {chain.links.map((l, i) => {
           const next = chain.links[i + 1];
@@ -100,6 +102,7 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
         })}
       </ol>
       {broken?.brokenReason && <p className="lane-note"><span className="sev">✂</span> {broken.title}: {broken.brokenReason}</p>}
+      </>}
     </section>
   );
 }
@@ -140,12 +143,14 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
       {link.kind === 'consequence' && (
         <div className="deadline">
           <div className="section-label">{t('Limitation calculation')}</div>
-          <DeadlineTrack lim={analysis.limitation} />
-          <ol className="steps">
-            {analysis.limitation.steps.map((s, i) => (
-              <li key={i} className={`step step-${s.effect}`}><span className="mono">{s.date.split('-').reverse().join('/')}</span><span>{s.text}</span><span className="muted mono">{s.rule}</span></li>
-            ))}
-          </ol>
+          {analysis.limitation && <>
+            <DeadlineTrack lim={analysis.limitation} />
+            <ol className="steps">
+              {analysis.limitation.steps.map((s, i) => (
+                <li key={i} className={`step step-${s.effect}`}><span className="mono">{s.date.split('-').reverse().join('/')}</span><span>{s.text}</span><span className="muted mono">{s.rule}</span></li>
+              ))}
+            </ol>
+          </>}
         </div>
       )}
     </aside>
