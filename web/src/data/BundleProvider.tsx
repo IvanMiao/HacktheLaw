@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { allDocs, docOf, factOf, qualOf, type CaseBundle } from './bundle';
+import './documents';
 import type { BundleContextValue } from './BundleContext';
 import { BundleContext } from './BundleContext';
 

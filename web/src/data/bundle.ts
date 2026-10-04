@@ -1,4 +1,10 @@
-import { LIBRARY, type Doc } from './documents';
+import type { Doc } from './documents.js';
+
+let libraryDocs: Doc[] = [];
+
+export function registerLibrary(docs: Doc[]) {
+  libraryDocs = docs;
+}
 
 export type Text = string | { en: string; fr: string };
 export type Anchor = { doc: string; quote: string; verified?: boolean };
@@ -38,13 +44,15 @@ export type AgentEvent = { at: number; stage: 'ingest' | 'extract' | 'qualify' |
 export type CaseBundle = {
   id: string; origin: 'cached' | 'ai';
   provider?: string; models?: Record<string, string>; generatedAt?: string;
+  usage?: Record<string, { input: number; output: number; reasoning: number }>;
+  steps?: number;
   profile: CaseProfile; docs: Doc[];
   facts: Fact[]; qualifications: Qualification[];
   trace?: AgentEvent[];
 };
 
 export function allDocs(bundle: CaseBundle): Doc[] {
-  return [...bundle.docs, ...LIBRARY];
+  return [...bundle.docs, ...libraryDocs];
 }
 
 export function docOf(bundle: CaseBundle, id: string): Doc {

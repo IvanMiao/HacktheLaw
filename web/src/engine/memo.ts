@@ -21,9 +21,16 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
 
   b.push({ t: 'h1', parts: [t('Defence memo — {title}', { title: t(profile.title) })] });
   b.push({ t: 'h2', parts: [t('1. Case summary')] });
-  const summary: Part[] = [t('We act for {side}, in {title} before the {court}.', {
-    side: t(profile.side), title: t(profile.title), court: profile.court,
-  })];
+  const rawSide = typeof profile.side === 'string' ? profile.side : profile.side.en;
+  const represented = /^(Defendant|Claimant) \((.+)\)$/.exec(rawSide);
+  const summary: Part[] = [represented
+    ? t('We act for the {role}, {name}, in {title} before the {court}.', {
+      role: represented[1] === 'Defendant' ? t('defendant') : t('claimant'),
+      name: represented[2], title: t(profile.title), court: profile.court,
+    })
+    : t('We act for {side}, in {title} before the {court}.', {
+      side: t(profile.side), title: t(profile.title), court: profile.court,
+    })];
   if (profile.amount) {
     summary.push(t(' Amount in dispute: {amount}.', { amount: profile.amount }));
     if (limitationStart?.anchors[0]) summary.push(limitationStart.anchors[0]);

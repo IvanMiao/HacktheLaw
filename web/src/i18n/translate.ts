@@ -1,5 +1,5 @@
-import { french } from './fr';
-import type { Text } from '../data/bundle';
+import { french } from './fr.js';
+import type { Text } from '../data/bundle.js';
 
 export type Locale = 'en' | 'fr';
 export type Translator = (text: Text, values?: Record<string, string | number>) => string;

@@ -1,8 +1,8 @@
-import { english, type Translator } from '../i18n/translate';
-import { factOf, qualOf, type Anchor, type CaseBundle, type Fact, type Qualification } from '../data/bundle';
-import { addDays, daysBetween, fr } from './dates';
-import { computeLimitation, type LimitationEvent, type LimitationResult } from './limitation';
-import type { RegimeKey } from './regimes';
+import { english, type Translator } from '../i18n/translate.js';
+import { factOf, qualOf, type Anchor, type CaseBundle, type Fact, type Qualification } from '../data/bundle.js';
+import { addDays, daysBetween, fr } from './dates.js';
+import { computeLimitation, type LimitationEvent, type LimitationResult } from './limitation.js';
+import type { RegimeKey } from './regimes.js';
 
 export type Decision = 'proposed' | 'confirmed' | 'rejected';
 

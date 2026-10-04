@@ -274,12 +274,13 @@ mark.hl.active { background: #fde9a8; border-bottom-color: var(--amber); animati
 .start-card { width: 460px; display: grid; gap: 14px; justify-items: center; text-align: center; }
 .brand-lg { display: flex; align-items: center; gap: 12px; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; }
 .tagline { font-family: var(--serif); font-size: 19px; }
-.drop { width: 100%; border: 1.5px dashed var(--line-2); border-radius: 10px; padding: 26px; display: grid; gap: 4px; margin-top: 10px; background: var(--card); color: var(--ink-2); }
-.stages { list-style: none; padding: 0; margin: 16px 0 0; width: 100%; display: grid; gap: 10px; text-align: left; }
-.stages li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: center; color: var(--muted); }
-.stages .dot { width: 10px; height: 10px; border-radius: 3px; border: 1.5px solid var(--line-2); }
-.stages li.now { color: var(--ink); } .stages li.now .dot { border-color: var(--ink); animation: pulse 0.8s infinite alternate; }
-.stages li.done { color: var(--ink); } .stages li.done .dot { background: var(--ink); border-color: var(--ink); }
+.file-input { display: none; }
+.drop { width: 100%; border: 1.5px dashed var(--line-2); border-radius: 10px; padding: 26px; display: grid; gap: 4px; margin-top: 10px; background: var(--card); color: var(--ink-2); cursor: pointer; overflow-wrap: anywhere; }
+.drop:hover, .drop:focus-visible { border-color: var(--ink-2); outline: none; }
+.stages { width: 100%; margin: 16px 0 0; display: grid; gap: 10px; text-align: left; }
+.stages ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; max-height: 280px; overflow: auto; }
+.stages li { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--muted); font-size: 12px; }
+.stages li.event-warn { color: var(--amber); }
 @keyframes pulse { to { opacity: 0.3; } }
 
 @media (prefers-reduced-motion: reduce) {

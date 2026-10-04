@@ -19,15 +19,21 @@ const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['mem
 
 export default function App() {
   const [bundle, setBundle] = useState<CaseBundle>(SAMPLE);
-  return <BundleProvider bundle={bundle}><AppContent key={bundle.id} onBundle={setBundle} /></BundleProvider>;
+  const [hasLoaded, setHasLoaded] = useState(false);
+  return <BundleProvider bundle={bundle}><AppContent key={bundle.id} onBundle={setBundle} initialReady={hasLoaded} onLoaded={() => setHasLoaded(true)} /></BundleProvider>;
 }
 
-function AppContent({ onBundle }: { onBundle: (bundle: CaseBundle) => void }) {
+function AppContent({ onBundle, initialReady, onLoaded }: {
+  onBundle: (bundle: CaseBundle) => void;
+  initialReady: boolean;
+  onLoaded: () => void;
+}) {
   const { bundle, docs, factOf, qualOf } = useBundle();
   const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
-  const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode ? 'ready' : 'start');
+  const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode || initialReady ? 'ready' : 'start');
+  const [startError, setStartError] = useState('');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
   const [state, setState] = useState<AnalysisState>(() => {
     const next = initialState(bundle);
@@ -107,7 +113,14 @@ function AppContent({ onBundle }: { onBundle: (bundle: CaseBundle) => void }) {
   useEffect(() => { document.documentElement.classList.toggle('presenter', presenter); }, [presenter]);
 
   if (stage !== 'ready') {
-    return <StartScreen loading={stage === 'loading'} onLoad={() => setStage('loading')} onDone={() => setStage('ready')} onBundle={onBundle} />;
+    return <StartScreen
+      loading={stage === 'loading'}
+      error={startError}
+      onLoad={() => { setStartError(''); setStage('loading'); }}
+      onDone={() => { setStage('ready'); onLoaded(); }}
+      onError={(message) => { setStartError(message); setStage('start'); }}
+      onBundle={onBundle}
+    />;
   }
 
   const enabled = analysis.chains.filter((chain) => chain.status !== 'not_applicable');
