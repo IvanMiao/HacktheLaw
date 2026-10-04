@@ -3,13 +3,14 @@ import { useLocale } from '../i18n/useLocale';
 import { useBundle } from '../data/useBundle';
 import type { Anchor } from '../data/bundle';
 import { isContested, type Analysis, type AnalysisState } from '../engine/chains';
+import type { PartySide } from '../engine/perspective';
 import { buildMemo, toMd, type Part } from '../engine/memo';
 import { SourceChip } from './SourceChip';
 
-export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state: AnalysisState; onAnchor: (a: Anchor) => void }) {
+export function Memo({ analysis, state, side, onAnchor }: { side: PartySide; analysis: Analysis; state: AnalysisState; onAnchor: (a: Anchor) => void }) {
   const { t } = useLocale();
   const { bundle, docOf } = useBundle();
-  const blocks = buildMemo(bundle, analysis, state, t);
+  const blocks = buildMemo(bundle, analysis, state, t, side);
   const [copied, setCopied] = useState(false);
   const cited = [...new Set(blocks.flatMap((x) => x.parts.filter((p): p is Anchor => typeof p !== 'string').map((p) => p.doc)))];
   const render = (parts: Part[]): ReactNode[] => parts.map((p, i) => (typeof p === 'string' ? p : <SourceChip key={i} anchor={p} onAnchor={onAnchor} />));

@@ -368,3 +368,7 @@ html[lang='fr'] .tile-body strong { font-size: 12px; }
   .topbar .modes { order: 2; width: 100%; margin: 0; justify-content: center; }
   .modes button { padding: 5px 7px; }
 }
+
+.party-view { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; color: var(--muted); }
+.party-view select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }
+.lane-perspective { margin: 0 0 12px; font-size: 12px; color: var(--ink-2); }

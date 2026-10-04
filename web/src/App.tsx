@@ -7,6 +7,7 @@ import { PRESETS, getCase, type CaseId } from './data/catalog';
 import { createCaseSession, type CaseSession } from './data/caseSession';
 import { adoptInterpretation, disagreeInterpretation, needsReview, analyse, counterfactuals, value, type AnalysisState, type ReviewEntry } from './engine/chains';
 import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './engine/reviewStorage';
+import { defaultSide, representedParty, rolesNeedReview, sideLabel, type PartySide } from './engine/perspective';
 import { daysBetween, long } from './engine/dates';
 import { useLocale } from './i18n/useLocale';
 import { ChainsView } from './components/Chains';
@@ -39,7 +40,7 @@ export default function App() {
     const url = new URL(location.href);
     if (next.preset) url.searchParams.set('case', next.id);
     else url.searchParams.delete('case');
-    ['confirmed','whatif','doc','link'].forEach(key => url.searchParams.delete(key));
+    ['confirmed','whatif','doc','link','side'].forEach(key => url.searchParams.delete(key));
     history.replaceState(null, '', url);
     setCaseId(nextCaseId);
     setBundle(next);
@@ -74,6 +75,16 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   const currentStage = initialReady ? 'ready' : stage;
   const [startError, setStartError] = useState('');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
+  const [side, setSide] = useState<PartySide>(() => {
+    const requested = params.get('side');
+    return requested === 'claimant' || requested === 'defendant' ? requested : defaultSide(bundle);
+  });
+  const changeSide = (next: PartySide) => {
+    setSide(next);
+    const url = new URL(location.href);
+    url.searchParams.set('side', next);
+    history.replaceState(null, '', url);
+  };
   const [state, setState] = useState<AnalysisState>(() => {
     let saved = null;
     try { saved = localStorage.getItem(reviewStorageKey(bundle)); } catch { /* Continue with session-only reviews. */ }
@@ -235,6 +246,11 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           </select>
           <span className="b-prov qbadge provenance-chip">{provenance}</span>
         </div>
+        <label className="party-view"><span>{t('Representing')}</span>
+          <select aria-label={t('Representing')} value={side} onChange={(event) => changeSide(event.target.value as PartySide)}>
+            {(['claimant', 'defendant'] as const).map((role) => <option key={role} value={role}>{sideLabel(bundle, role, t)}</option>)}
+          </select>
+        </label>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([currentMode, label], i) => (
             <button key={currentMode} className={mode === currentMode ? 'on' : ''} onClick={() => setMode(currentMode)}>{t(label)}<kbd>{i + 1}</kbd></button>
@@ -248,7 +264,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
             <h2>{t('Case details')}</h2>
             <dl>
               <div><dt>{t('Court')}</dt><dd>{bundle.profile.court}</dd></div>
-              <div><dt>{t('Side')}</dt><dd>{t(bundle.profile.side)}</dd></div>
+              <div><dt>{t('Side')}</dt><dd>{sideLabel(bundle, side, t)} · {representedParty(bundle, side, t)}</dd></div>
               <div><dt>{t('As of')}</dt><dd>{long(bundle.profile.asOf, locale)}</dd></div>
               {bundle.profile.nextHearing && <div><dt>{t('Next hearing')}</dt><dd>{long(bundle.profile.nextHearing, locale)} · {t('in {days} days', { days: daysBetween(bundle.profile.asOf, bundle.profile.nextHearing) })}</dd></div>}
             </dl>
@@ -264,10 +280,9 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           </div>
         )}
         <span className="b-dot" />
-        <strong>{bundle.preset
-          ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
-          : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
-          : pendingReviews > 0 ? t('Grounds awaiting reassessment') : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
+        <strong>{rolesNeedReview(bundle) ? t('Party roles need verification')
+          : grounds ? t(side === 'claimant' ? '{count} procedural risk(s) to address' : '{count} potential ground(s) to review', { count: grounds })
+          : pendingReviews > 0 ? t('Grounds awaiting reassessment') : t('No active consequence in the {count} enabled chains', { count: analysis.chains.length })}</strong>
         {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) requiring reassessment', { count: pendingReviews })}</span>}
@@ -284,10 +299,10 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           {mode === 'facts' && reviewStorageFailed && <p className="callout amber" role="alert">{t('Review kept in this session only. Copy the memo to keep a record.')}</p>}
           {mode === 'facts' && fact && <FactDetail fact={fact} state={state} analysis={analysis} onAnchor={showAnchor} onOpenLink={openLink} onAdopt={adopt} onDisagree={disagree} />}
           {mode === 'chains' && (
-            <ChainsView analysis={analysis} cfs={cfs} state={state} linkId={linkId} onLink={openLink} onWhatIf={toggleWhatIf}
+            <ChainsView side={side} analysis={analysis} cfs={cfs} state={state} linkId={linkId} onLink={openLink} onWhatIf={toggleWhatIf}
               on642={() => setState((current) => ({ ...current, art642: !current.art642 }))} onReset={() => setState((current) => ({ ...current, whatIf: {} }))} onAnchor={showAnchor} />
           )}
-          {mode === 'memo' && <Memo analysis={analysis} state={state} onAnchor={showAnchor} />}
+          {mode === 'memo' && <Memo side={side} analysis={analysis} state={state} onAnchor={showAnchor} />}
         </main>
         {viewerOpen
           ? <aside className="col right"><SourceViewer docId={docId} onDoc={(id) => { setDocId(id); setAnchor(null); }} active={anchor} quotesByDoc={quotesByDoc} onCollapse={() => setViewerOpen(false)} /></aside>

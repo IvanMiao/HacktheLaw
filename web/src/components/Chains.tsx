@@ -4,6 +4,7 @@ import { fr } from '../engine/dates';
 import type { CSSProperties } from 'react';
 import type { Anchor } from '../data/bundle';
 import type { Analysis, AnalysisState, ChainResult, ChainStatus, Counterfactual, Link, NodeKind } from '../engine/chains';
+import { perspectiveImpact, type PartySide } from '../engine/perspective';
 import { REGIMES } from '../engine/regimes';
 import { DeadlineTrack } from './DeadlineTrack';
 import { Pips } from './Glyphs';
@@ -22,11 +23,11 @@ export function StatusPill({ status }: { status: ChainStatus }) {
 }
 
 type Props = {
-  analysis: Analysis; cfs: Counterfactual[]; state: AnalysisState; linkId: string | null;
+  side: PartySide; analysis: Analysis; cfs: Counterfactual[]; state: AnalysisState; linkId: string | null;
   onLink: (id: string | null) => void; onWhatIf: (qid: string, v: boolean) => void; on642: () => void; onReset: () => void; onAnchor: (a: Anchor) => void;
 };
 
-export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
+export function ChainsView({ side, analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
   const { t } = useLocale();
   const { bundle } = useBundle();
   const selected = analysis.chains.flatMap((c) => c.links).find((l) => l.id === linkId);
@@ -62,7 +63,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
         <h3>{t('Procedural timeline')}</h3>
         <ol>{analysis.timeline.map(event => <li key={event.label}><span>{t(event.label)}</span> <time dateTime={event.date}>{fr(event.date)}</time></li>)}</ol>
       </section>}
-      {analysis.chains.map((c) => <Lane key={c.id} chain={c} selected={linkId} onLink={onLink} />)}
+      {analysis.chains.map((c) => <Lane key={c.id} side={side} chain={c} selected={linkId} onLink={onLink} />)}
 
       {selected ? <LinkDrawer link={selected} analysis={analysis} onAnchor={onAnchor} onClose={() => onLink(null)} />
         : <p className="hint muted small">{t('Select a domino to see its rule, inputs and sources.')}</p>}
@@ -70,8 +71,10 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
   );
 }
 
-function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
+function Lane({ chain, side, selected, onLink }: { side: PartySide; chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
   const { t } = useLocale();
+  const { bundle } = useBundle();
+  const impact = perspectiveImpact(bundle, chain, side, t);
   const standing = chain.status === 'holds' || chain.status === 'contested';
   const broken = chain.links.find((l) => l.status === 'broken');
   return (
@@ -84,6 +87,7 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
         </div>
         <StatusPill status={chain.status} />
       </header>
+      <p className="lane-perspective"><strong>{t('For your side')}: {impact.label}.</strong> {impact.action}</p>
       {chain.status === 'not_applicable' && <p className="lane-note">{chain.missing?.join('; ')}</p>}
       {chain.status !== 'not_applicable' && <>
       <ol className="tiles" style={{ gridTemplateColumns: `repeat(${chain.links.length}, minmax(0, 1fr))` }}>

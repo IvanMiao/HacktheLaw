@@ -1,5 +1,6 @@
 import { docOf, qualOf, type Anchor, type CaseBundle } from '../data/bundle.js';
 import { deriveCase, value, needsReview, type Analysis, type AnalysisState } from './chains.js';
+import { perspectiveImpact, representedParty, sideLabel, type PartySide } from './perspective.js';
 import { daysBetween, fr } from './dates.js';
 import { REGIMES } from './regimes.js';
 import { english, type Translator } from '../i18n/translate.js';
@@ -21,18 +22,24 @@ function appendReviews(blocks: Block[], bundle: CaseBundle, state: AnalysisState
   });
 }
 
-export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: AnalysisState, t: Translator = english): Block[] {
+export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: AnalysisState, t: Translator = english, side?: PartySide): Block[] {
+  const claimantView = side === 'claimant';
+  const memoTitle = side && bundle.preset === 'c5' ? 'Appeal review memo — {title}' : claimantView ? 'Claimant review memo — {title}' : 'Defence memo — {title}';
   if (bundle.preset) {
     const blocks: Block[] = [
-      { t: 'h1', parts: [t('Defence memo — {title}', { title: t(bundle.profile.title) })] },
+      { t: 'h1', parts: [t(memoTitle, { title: t(bundle.profile.title) })] },
       { t: 'note', parts: [t('SYNTHETIC — fictional evidence; deterministic draft, not legal advice.')] },
-      { t: 'p', parts: [t(bundle.profile.side), ' · ', bundle.profile.court, ' · ', t(bundle.profile.summary ?? '')] },
+      { t: 'p', parts: [side ? `${sideLabel(bundle, side, t)} · ${representedParty(bundle, side, t)}` : t(bundle.profile.side), ' · ', bundle.profile.court, ' · ', t(bundle.profile.summary ?? '')] },
       { t: 'h2', parts: [t('1. Case summary')] },
       ...bundle.facts.map((fact) => ({ t: 'li' as const, parts: [`${fr(fact.date)} — ${t(fact.summary)} `, ...fact.anchors] })),
-      { t: 'h2', parts: [t('2. Defences, in procedural order')] },
+      { t: 'h2', parts: [t(side ? '2. Procedural consequences' : '2. Defences, in procedural order')] },
     ];
     for (const chain of analysis.chains) {
       blocks.push({ t: 'h3', parts: [`${chain.id} — ${chain.title} · ${t(chain.status)}`] });
+      if (side) {
+        const impact = perspectiveImpact(bundle, chain, side, t);
+        blocks.push({ t: 'note', parts: [`${t('For your side')}: ${impact.label}. ${impact.action}`] });
+      }
       for (const link of chain.links) {
         blocks.push({ t: 'li', parts: [`${link.title}: ${link.statement} [${t(link.status.replace('_', ' '))}]${link.rule ? ` (${link.rule})` : ''} `, ...link.anchors] });
       }
@@ -62,10 +69,10 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   const dead = analysis.chains.filter((chain) => chain.status === 'fails');
   const pending = analysis.chains.filter((chain) => chain.status === 'pending');
 
-  b.push({ t: 'h1', parts: [t('Defence memo — {title}', { title: t(profile.title) })] });
+  b.push({ t: 'h1', parts: [t(memoTitle, { title: t(profile.title) })] });
   if (Object.keys(state.whatIf).length) b.push({ t: 'note', parts: [t('Temporary scenario — saved interpretations are unchanged.')] });
   b.push({ t: 'h2', parts: [t('1. Case summary')] });
-  const rawSide = typeof profile.side === 'string' ? profile.side : profile.side.en;
+  const rawSide = side ? `${side === 'claimant' ? 'Claimant' : 'Defendant'} (${representedParty(bundle, side, t)})` : typeof profile.side === 'string' ? profile.side : profile.side.en;
   const represented = /^(Defendant|Claimant) \((.+)\)$/.exec(rawSide);
   const summary: Part[] = [represented
     ? t('We act for the {role}, {name}, in {title} before the {court}.', {
@@ -92,11 +99,11 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   }
   b.push({ t: 'p', parts: summary });
 
-  b.push({ t: 'h2', parts: [t('2. Defences, in procedural order')] });
-  b.push({ t: 'p', parts: [t('No exception de procédure requiring to be raised in limine litis was identified. The grounds below are fins de non-recevoir: they may be raised at any stage (art. 123 CPC) without proof of prejudice (art. 124 CPC). We nevertheless recommend raising them in the first written submissions.')] });
+  b.push({ t: 'h2', parts: [t(claimantView ? '2. Procedural risks to the claim' : '2. Defences, in procedural order')] });
+  b.push({ t: 'p', parts: [t(claimantView ? 'Review the procedural challenges below against the source documents and the current interpretations.' : 'No exception de procédure requiring to be raised in limine litis was identified. The grounds below are fins de non-recevoir: they may be raised at any stage (art. 123 CPC) without proof of prejudice (art. 124 CPC). We nevertheless recommend raising them in the first written submissions.')] });
   if (!live.length) b.push({ t: 'note', parts: [t(pending.length ? 'Grounds awaiting reassessment' : 'In the current scenario, no ground holds among the enabled chains.')] });
   live.forEach((chain, i) => {
-    b.push({ t: 'h3', parts: [t('Ground {letter} — {outcome}{independent}', {
+    b.push({ t: 'h3', parts: [t(claimantView ? 'Risk {letter} — {outcome}{independent}' : 'Ground {letter} — {outcome}{independent}', {
       letter: String.fromCharCode(65 + i), outcome: chain.outcome, independent: live.length > 1 ? t(' (independent of the other ground)') : '',
     })] });
     chain.links.forEach((link) => b.push({ t: 'li', parts: [`${link.title}: ${link.statement}${link.rule ? ` (${link.rule})` : ''} `, ...link.anchors] }));
@@ -106,7 +113,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
     })] });
     chain.hingesOn.forEach((qid) => {
       const qualification = qualOf(bundle, qid);
-      b.push({ t: 'note', parts: [t('Weak link — {question} Our position: {answer}. Expect the claimant to argue the opposite. {reasoning}', {
+      b.push({ t: 'note', parts: [t(claimantView ? 'Point to address — {question} Current interpretation: {answer}. Review the evidence before responding to this challenge. {reasoning}' : 'Weak link — {question} Our position: {answer}. Expect the claimant to argue the opposite. {reasoning}', {
         question: t(qualification.question), answer: t(value(bundle, state, qid) ? qualification.yes : qualification.no), reasoning: t(qualification.reasoning),
       })] });
     });
@@ -120,14 +127,19 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   pending.forEach((chain) => b.push({ t: 'note', parts: [t('Needs reassessment — {title}.', { title: chain.title })] }));
 
   b.push({ t: 'h2', parts: [t('3. Next steps')] });
-  const defences = t(live.length > 1 ? 'both fins de non-recevoir' : live.length ? 'the fin de non-recevoir' : 'our defences');
-  b.push({ t: 'li', parts: [pending.length && !live.length ? t('Resolve the pending interpretations before relying on these grounds.') : profile.nextHearing
-    ? t('Serve written submissions raising {defences} before the hearing of {date} ({days} days).', {
-      defences, date: fr(profile.nextHearing), days: days!,
-    })
-    : t('Serve written submissions raising {defences} before the next hearing.', { defences })] });
-  if (live.some((chain) => chain.id === 'C2')) b.push({ t: 'li', parts: [t('Ask the claimant to produce any referral to a conciliator under the conciliation clause; absent any, ground C2 is established.')] });
-  if (live.some((chain) => chain.id === 'C1') && sanction) b.push({ t: 'li', parts: [t('Produce the registry record and the order of caducité of {date} as exhibits.', { date: fr(sanction.date) })] });
+  if (claimantView) {
+    analysis.chains.forEach((chain) => b.push({ t: 'li', parts: [`${chain.id} — ${perspectiveImpact(bundle, chain, side, t).action}`] }));
+  } else {
+    const defences = t(live.length > 1 ? 'both fins de non-recevoir' : live.length ? 'the fin de non-recevoir' : 'our defences');
+    b.push({ t: 'li', parts: [pending.length && !live.length ? t('Resolve the pending interpretations before relying on these grounds.') : profile.nextHearing
+      ? t('Serve written submissions raising {defences} before the hearing of {date} ({days} days).', {
+        defences, date: fr(profile.nextHearing), days: days!,
+      })
+      : t('Serve written submissions raising {defences} before the next hearing.', { defences })] });
+    if (live.some((chain) => chain.id === 'C2')) b.push({ t: 'li', parts: [t('Ask the claimant to produce any referral to a conciliator under the conciliation clause; absent any, ground C2 is established.')] });
+    if (live.some((chain) => chain.id === 'C1') && sanction) b.push({ t: 'li', parts: [t('Produce the registry record and the order of caducité of {date} as exhibits.', { date: fr(sanction.date) })] });
+
+  }
 
   b.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
   analysis.contestedQuals.forEach((qid) => b.push({ t: 'li', parts: [t(state.decisions[qid] === 'disagreed' ? 'Not adopted: {question}' : state.decisions[qid] === 'pending' ? 'To verify: {question}' : 'AI-inferred, not yet confirmed: {question}', { question: t(qualOf(bundle, qid).question) })] }));
