@@ -1,5 +1,5 @@
 import { docOf, qualOf, type Anchor, type CaseBundle } from '../data/bundle.js';
-import { deriveCase, value, type Analysis, type AnalysisState } from './chains.js';
+import { deriveCase, value, needsReview, type Analysis, type AnalysisState } from './chains.js';
 import { daysBetween, fr } from './dates.js';
 import { REGIMES } from './regimes.js';
 import { english, type Translator } from '../i18n/translate.js';
@@ -12,8 +12,8 @@ function appendReviews(blocks: Block[], bundle: CaseBundle, state: AnalysisState
   const saved = { ...state, whatIf: {} };
   bundle.qualifications.forEach((qualification) => {
     const review = state.reviews[qualification.id];
-    if (!(qualification.id in state.interpretations) && state.decisions[qualification.id] !== 'pending' && !review) return;
-    blocks.push({ t: 'li', parts: [t(state.decisions[qualification.id] === 'pending' ? 'To verify — {question}: {answer}.' : 'Saved interpretation — {question}: {answer}.', {
+    if (!(qualification.id in state.interpretations) && !needsReview(state.decisions[qualification.id]) && !review) return;
+    blocks.push({ t: 'li', parts: [t(state.decisions[qualification.id] === 'disagreed' ? 'Not adopted — {question}: {answer}.' : state.decisions[qualification.id] === 'pending' ? 'To verify — {question}: {answer}.' : 'Saved interpretation — {question}: {answer}.', {
       question: t(qualification.question), answer: t(value(bundle, saved, qualification.id) ? qualification.yes : qualification.no),
     }), ...(facts.find((fact) => fact.id === qualification.factId)?.anchors ?? [])] });
     if (review?.note) blocks.push({ t: 'p', parts: [t('Lawyer note: {note}', { note: review.note })] });
@@ -44,7 +44,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
     blocks.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
     for (const notice of analysis.notices ?? []) blocks.push({ t: 'note', parts: [notice] });
     for (const qualification of bundle.qualifications) {
-      blocks.push({ t: 'li', parts: [`${t(qualification.question)} — ${t(value(bundle, state, qualification.id) ? qualification.yes : qualification.no)}. ${qualification.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[qualification.id] !== undefined && state.reviews[qualification.id]?.note ? state.reviews[qualification.id].note : t(qualification.reasoning)}`] });
+      blocks.push({ t: 'li', parts: [`${t(qualification.question)} — ${t(value(bundle, state, qualification.id) ? qualification.yes : qualification.no)}. ${qualification.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[qualification.id] !== undefined && state.reviews[qualification.id]?.note ? state.reviews[qualification.id].note : value(bundle, state, qualification.id) === qualification.proposed ? t(qualification.reasoning) : ''}`] });
     }
     appendReviews(blocks, bundle, state, t);
     if (Object.keys(state.whatIf).length) blocks.push({ t: 'note', parts: [t('What-if scenario — lawyer decisions unchanged.')] });
@@ -94,7 +94,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
 
   b.push({ t: 'h2', parts: [t('2. Defences, in procedural order')] });
   b.push({ t: 'p', parts: [t('No exception de procédure requiring to be raised in limine litis was identified. The grounds below are fins de non-recevoir: they may be raised at any stage (art. 123 CPC) without proof of prejudice (art. 124 CPC). We nevertheless recommend raising them in the first written submissions.')] });
-  if (!live.length) b.push({ t: 'note', parts: [t(pending.length ? 'Grounds awaiting verification' : 'In the current scenario, no ground holds among the enabled chains.')] });
+  if (!live.length) b.push({ t: 'note', parts: [t(pending.length ? 'Grounds awaiting reassessment' : 'In the current scenario, no ground holds among the enabled chains.')] });
   live.forEach((chain, i) => {
     b.push({ t: 'h3', parts: [t('Ground {letter} — {outcome}{independent}', {
       letter: String.fromCharCode(65 + i), outcome: chain.outcome, independent: live.length > 1 ? t(' (independent of the other ground)') : '',
@@ -117,7 +117,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
       title: chain.title, link: broken?.title ?? '', reason: broken?.brokenReason ?? '',
     })] });
   });
-  pending.forEach((chain) => b.push({ t: 'note', parts: [t('Pending verification — {title}.', { title: chain.title })] }));
+  pending.forEach((chain) => b.push({ t: 'note', parts: [t('Needs reassessment — {title}.', { title: chain.title })] }));
 
   b.push({ t: 'h2', parts: [t('3. Next steps')] });
   const defences = t(live.length > 1 ? 'both fins de non-recevoir' : live.length ? 'the fin de non-recevoir' : 'our defences');
@@ -130,7 +130,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   if (live.some((chain) => chain.id === 'C1') && sanction) b.push({ t: 'li', parts: [t('Produce the registry record and the order of caducité of {date} as exhibits.', { date: fr(sanction.date) })] });
 
   b.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
-  analysis.contestedQuals.forEach((qid) => b.push({ t: 'li', parts: [t(state.decisions[qid] === 'pending' ? 'To verify: {question}' : 'AI-inferred, not yet confirmed: {question}', { question: t(qualOf(bundle, qid).question) })] }));
+  analysis.contestedQuals.forEach((qid) => b.push({ t: 'li', parts: [t(state.decisions[qid] === 'disagreed' ? 'Not adopted: {question}' : state.decisions[qid] === 'pending' ? 'To verify: {question}' : 'AI-inferred, not yet confirmed: {question}', { question: t(qualOf(bundle, qid).question) })] }));
   appendReviews(b, bundle, state, t);
   if (facts.some((fact) => fact.role === 'writ_sanction')) b.push({ t: 'li', parts: [t('Replace the placeholder Cass. 2e civ. authority on caducité and interruption (C1).')] });
   b.push({ t: 'li', parts: [t('Check statutory excerpts against the current Légifrance versions (arts. 857, 122–126 CPC; arts. 2224–2243 C. civ.).')] });

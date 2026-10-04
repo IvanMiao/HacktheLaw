@@ -5,7 +5,7 @@ import { SAMPLE } from './data/sample';
 import type { Anchor, CaseBundle } from './data/bundle';
 import { PRESETS, getCase, type CaseId } from './data/catalog';
 import { createCaseSession, type CaseSession } from './data/caseSession';
-import { adoptInterpretation, analyse, counterfactuals, value, type AnalysisState, type Decision, type ReviewEntry } from './engine/chains';
+import { adoptInterpretation, disagreeInterpretation, needsReview, analyse, counterfactuals, value, type AnalysisState, type ReviewEntry } from './engine/chains';
 import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './engine/reviewStorage';
 import { daysBetween, long } from './engine/dates';
 import { useLocale } from './i18n/useLocale';
@@ -135,9 +135,8 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
     setState((current) => resetReviews(bundle, current));
     try { localStorage.removeItem(reviewStorageKey(bundle)); setReviewStorageFailed(false); } catch { /* ignore */ }
   }, [bundle, t]);
-  const decide = useCallback((qid: string, decision: Decision) => saveReviewState({ ...state, decisions: { ...state.decisions, [qid]: decision } }), [state, saveReviewState]);
   const adopt = (qid: string, interpretation: boolean, review: ReviewEntry) => saveReviewState(adoptInterpretation(bundle, state, qid, interpretation, review));
-  const saveReview = (qid: string, review: ReviewEntry) => saveReviewState({ ...state, reviews: { ...state.reviews, [qid]: review } });
+  const disagree = (qid: string, review: ReviewEntry) => saveReviewState(disagreeInterpretation(bundle, state, qid, review));
   const toggleWhatIf = (qid: string, nextValue: boolean) => setState((current) => {
     const whatIf = { ...current.whatIf };
     if (qid in whatIf) delete whatIf[qid]; else whatIf[qid] = nextValue;
@@ -218,7 +217,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   const contestedLinks = analysis.chains.flatMap((chain) => chain.links).filter((link) => link.status === 'contested').length;
   const pendingAi = bundle.qualifications.filter((qualification) => qualification.source === 'ai_inferred' && state.decisions[qualification.id] === 'proposed').length;
   const whatIf = Object.keys(state.whatIf).length > 0;
-  const pendingReviews = whatIf ? 0 : bundle.qualifications.filter((q) => state.decisions[q.id] === 'pending').length;
+  const pendingReviews = bundle.qualifications.filter((q) => needsReview(state.decisions[q.id]) && !(q.id in state.whatIf)).length;
   const fact = bundle.facts.find((item) => item.id === factId) ?? bundle.facts[0];
 
   return (
@@ -268,10 +267,10 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
         <strong>{bundle.preset
           ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
           : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
-          : pendingReviews > 0 ? t('Grounds awaiting verification') : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
+          : pendingReviews > 0 ? t('Grounds awaiting reassessment') : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
         {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
-        {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) to verify', { count: pendingReviews })}</span>}
+        {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) requiring reassessment', { count: pendingReviews })}</span>}
         {hasReviews(state) && <span className="banner-secondary"><button className="linkish" onClick={resetReviewState}>{t('Reset reviews')}</button></span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>
@@ -283,7 +282,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
         {mode !== 'chains' && <aside className="col left"><FactList state={state} selected={factId} onSelect={(id) => { selectFact(id); if (mode !== 'facts') setMode('facts'); }} /></aside>}
         <main className="col center">
           {mode === 'facts' && reviewStorageFailed && <p className="callout amber" role="alert">{t('Review kept in this session only. Copy the memo to keep a record.')}</p>}
-          {mode === 'facts' && fact && <FactDetail fact={fact} state={state} analysis={analysis} onDecide={decide} onAnchor={showAnchor} onOpenLink={openLink} onAdopt={adopt} onSaveReview={saveReview} />}
+          {mode === 'facts' && fact && <FactDetail fact={fact} state={state} analysis={analysis} onAnchor={showAnchor} onOpenLink={openLink} onAdopt={adopt} onDisagree={disagree} />}
           {mode === 'chains' && (
             <ChainsView analysis={analysis} cfs={cfs} state={state} linkId={linkId} onLink={openLink} onWhatIf={toggleWhatIf}
               on642={() => setState((current) => ({ ...current, art642: !current.art642 }))} onReset={() => setState((current) => ({ ...current, whatIf: {} }))} onAnchor={showAnchor} />

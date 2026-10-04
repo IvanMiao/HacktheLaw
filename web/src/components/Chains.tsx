@@ -14,7 +14,7 @@ const KIND: Record<NodeKind, string> = {
   lost_effect: 'Lost effect', consequence: 'Consequence', outcome: 'Outcome',
 };
 
-const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken', not_applicable: 'Not applicable', pending: 'To verify' };
+const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken', not_applicable: 'Not applicable', pending: 'Needs reassessment' };
 
 export function StatusPill({ status }: { status: ChainStatus }) {
   const { t } = useLocale();
@@ -44,7 +44,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
               <input type="checkbox" checked={c.active} onChange={() => onWhatIf(c.qid, c.flipsTo)} />
               <span className="switch" aria-hidden />
               <span>{c.label}</span>
-              {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'pending' ? 'To verify' : e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
+              {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'pending' ? 'Needs reassessment' : e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
             </label>
           ))}
           {!bundle.preset && <label className={`toggle ${state.art642 ? 'on' : ''}`}>
@@ -104,7 +104,7 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
                   <span>{l.statement}</span>
                 </span>
                 {(l.status === 'contested' || l.status === 'broken' || l.status === 'pending') && <span className="tile-foot">
-                  {l.status === 'pending' ? <span>{t('To verify')}</span> : l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="breaks">{t('Breaks here')}</span>}
+                  {l.status === 'pending' ? <span>{t('Needs reassessment')}</span> : l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="breaks">{t('Breaks here')}</span>}
                 </span>}
               </button>
             </li>
@@ -143,7 +143,7 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
           {link.status === 'broken' && link.brokenReason && <div className="callout green"><strong>{t('Chain breaks here.')}</strong> {link.brokenReason}</div>}
           {link.contrast && <div className="callout neutral"><strong>{t('Regime contrast.')}</strong> {link.contrast}</div>}
           {link.status === 'contested' && <div className="callout violet"><strong>{t('Contested.')}</strong> {t('Depends on an AI-inferred qualification awaiting lawyer review.')}</div>}
-          {link.status === 'pending' && <div className="callout neutral">{t('To verify')}</div>}
+          {link.status === 'pending' && <div className="callout neutral">{t('Needs reassessment')}</div>}
         </div>
       </div>
       {regime && (
