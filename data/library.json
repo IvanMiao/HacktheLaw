@@ -1,0 +1,54 @@
+[
+  {
+    "id": "cass2003",
+    "group": "caselaw",
+    "provenance": "real",
+    "format": "markdown",
+    "date": "2003-02-14",
+    "title": "Cass. ch. mixte, 14 févr. 2003, n° 00-19.423",
+    "short": "Cass. mixte 2003",
+    "file": "caselaw/Cour de cassation chambre mixte 14 fevrier 2003 - n00-19423.md",
+    "pdf": "caselaw/Cour de cassation chambre mixte 14 fevrier 2003 - n00-19423.pdf"
+  },
+  {
+    "id": "cass2014",
+    "group": "caselaw",
+    "provenance": "real",
+    "format": "markdown",
+    "date": "2014-12-12",
+    "title": "Cass. ch. mixte, 12 déc. 2014, n° 13-19.684",
+    "short": "Cass. mixte 2014",
+    "file": "caselaw/Cour de cassation chambre mixte 12 decembre 2014 - n13-19684.md",
+    "pdf": "caselaw/Cour de cassation chambre mixte 12 decembre 2014 - n13-19684.pdf"
+  },
+  {
+    "id": "cassC1",
+    "group": "caselaw",
+    "provenance": "mock",
+    "format": "text",
+    "title": "Cass. 2e civ. — caducité et interruption [à compléter]",
+    "short": "Cass. 2e civ. (placeholder)",
+    "note": "Placeholder — the legal team must replace this with a real Cass. 2e civ. decision.",
+    "file": "caselaw/placeholder-cass-2e-civ.txt"
+  },
+  {
+    "id": "cpc",
+    "group": "statute",
+    "provenance": "mock",
+    "format": "text",
+    "title": "Code de procédure civile (extraits)",
+    "short": "CPC",
+    "note": "Excerpt typed for the demo — verify the current version on Légifrance.",
+    "file": "statutes/cpc.txt"
+  },
+  {
+    "id": "civ",
+    "group": "statute",
+    "provenance": "mock",
+    "format": "text",
+    "title": "Code civil & Code de commerce (extraits)",
+    "short": "C. civ. / C. com.",
+    "note": "Excerpt typed for the demo — verify the current version on Légifrance.",
+    "file": "statutes/civ.txt"
+  }
+]
