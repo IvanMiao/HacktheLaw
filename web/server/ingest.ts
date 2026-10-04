@@ -13,7 +13,6 @@ export type IngestedDoc = Doc & { docType: DocType };
 type Metadata = { title: string; short: string; date: string; docType: DocType };
 type Emit = (event: AgentEvent) => void;
 
-const DATA_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
 const DOC_TYPES: DocType[] = ['contract', 'invoice', 'correspondence', 'formal_notice', 'writ', 'registry_record', 'court_order', 'exhibits_list', 'pleading', 'judgment', 'other'];
 const META_SCHEMA = {
   type: 'object',
@@ -83,6 +82,7 @@ function throwIfAborted(signal?: AbortSignal) {
 }
 
 async function sampleDocs(): Promise<IngestedDoc[]> {
+  const DATA_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
   const manifest = JSON.parse(await readFile(resolve(DATA_ROOT, 'sample-case/manifest.json'), 'utf8')) as {
     id: string; file: string; title: string; short: string; date: string; provenance: 'mock'; note: string;
   }[];
@@ -137,9 +137,10 @@ export async function ingest(input: { sample: true } | { files: InputFile[] }, o
   ocrModel: string;
   emit: Emit;
   signal?: AbortSignal;
+  sampleDocs?: IngestedDoc[];
 }): Promise<{ docs: IngestedDoc[]; usage: Usage }> {
   throwIfAborted(options.signal);
-  if ('sample' in input) return { docs: await sampleDocs(), usage: {} };
+  if ('sample' in input) return { docs: options.sampleDocs ?? await sampleDocs(), usage: {} };
   if (!input.files.length) throw new Error('At least one document is required');
   const usage: Usage = {};
   const extracted = await mapLimit(input.files, 4, async (file, index) => {

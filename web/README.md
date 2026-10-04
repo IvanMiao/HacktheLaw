@@ -78,7 +78,7 @@ Optional realtime provider smoke: `node --env-file=.env.local scripts/realtime-p
 7. Switch case while listening/processing; old session must stop and no old-case command may execute in the new case.
 8. Switch EN/FR, inspect Facts/Sources/Memo, and test OFF-only typed fallback.
 
-Human microphone acceptance is pending the user's test. No external push, merge into main or deployment is included.
+Human microphone acceptance is pending the user's test. Cloudflare deployment is described below.
 
 Plans: `docs/VOICE_DEVELOPMENT_PLAN.md`, `docs/CASE_INTEGRATION_PLAN.md`; case verification: `docs/CASE_INTEGRATION_VERIFICATION.md`.
 
@@ -86,3 +86,11 @@ Original shortcuts:1/2/3 modes, J/K facts, C use / R edit interpretation, P pres
 
 
 Qualification controls offer **Use this interpretation**, **Modify interpretation**, and **To verify**. Modifications explicitly select an answer and record a reason before recalculation. Pending reviews retain the candidate interpretation without treating it as established. Notes and evidence-request drafts appear in the memo; requests are not sent. Reviews are stored for the current version of a CaseBundle, while what-if scenarios remain temporary. The “Reset reviews” control in the banner clears saved reviews for the current case.
+
+## Cloudflare production
+
+The existing site is https://hackthelaw-domino.pages.dev. Its Pages Worker serves AI analysis, voice intent/transcription and realtime voice under `/api/*`; the API keys are Cloudflare Secrets. Local Bun/Vite services are not required for the deployed site.
+
+The default **Analyse sample case with AI** action reads the original recorded `data/sample-case/ai-bundle.json` directly in the browser, without a backend request. Leave **Fresh run** unchecked for a fast demo. Fresh sample runs and uploaded files call the real AI providers. Worker analysis does not write bundle caches or persist case documents; the recorded demo remains bundled into the frontend. Live Worker analysis uses the existing keyword (BM25) retrieval path to stay within the free plan’s external subrequest budget; local Node analysis retains hybrid embeddings. Very large analyses may still reach the platform limit and return an explicit error.
+
+From `web/`, use `npm run deploy:cloudflare` to build and deploy both frontend and backend to the existing production branch. Use `npm run build:cloudflare` to build without deploying. Plain `npm run build` only produces the static frontend.

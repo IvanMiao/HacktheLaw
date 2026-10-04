@@ -14,7 +14,7 @@ type Emit = (event: AgentEvent) => void;
 const CHUNK_SIZE = 800;
 const OVERLAP = 150;
 const EMBED_BATCH = 32;
-const CACHE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../.cache/emb');
+const defaultCacheDir = () => resolve(dirname(fileURLToPath(import.meta.url)), '../.cache/emb');
 const STOPWORDS = new Set('a au aux avec ce ces dans de des du elle en et eux il ils je la le les leur lui ma mais me même mes moi mon ne nos notre nous on ou par pas pour qu que qui sa sans se ses son sur ta te tes ton tu un une vos votre vous'.split(' '));
 
 export function chunkDocuments(docs: Doc[]): Chunk[] {
@@ -105,8 +105,12 @@ export async function buildIndex(docs: Doc[], client: LlmClient, options: {
 } = {}): Promise<RetrievalIndex> {
   if (options.signal?.aborted) throw options.signal.reason ?? new DOMException('Aborted', 'AbortError');
   const chunks = chunkDocuments(docs);
-  const cacheDir = options.cacheDir ?? CACHE_DIR;
+  const cacheDir = options.cacheDir ?? defaultCacheDir();
   if (!chunks.length) return { chunks, vectors: [], cacheDir };
+  if (process.env.DOMINO_RETRIEVAL === 'keyword') {
+    options.emit?.({ at: Date.now(), stage: 'ingest', kind: 'note', text: 'Using keyword retrieval for the Worker request budget' });
+    return { chunks, vectors: null, cacheDir };
+  }
   const model = options.model ?? (process.env.DOMINO_EMBED_PROVIDER === 'openai' ? 'text-embedding-3-small' : 'mistral-embed');
   try {
     const vectors = await embedCached(chunks.map((chunk) => chunk.text), model, client, cacheDir, options.signal);
@@ -178,7 +182,7 @@ export async function search(index: RetrievalIndex, query: string, client: LlmCl
   if (index.vectors) {
     try {
       const model = options.model ?? index.model ?? (process.env.DOMINO_EMBED_PROVIDER === 'openai' ? 'text-embedding-3-small' : 'mistral-embed');
-      [queryVector] = await embedCached([query], model, client, index.cacheDir ?? CACHE_DIR, options.signal);
+      [queryVector] = await embedCached([query], model, client, index.cacheDir ?? defaultCacheDir(), options.signal);
       if (index.model && client.embeddingModel && client.embeddingModel !== index.model) {
         event(options.emit, `Query embedding model changed to ${client.embeddingModel}; using keyword search`);
         queryVector = null;

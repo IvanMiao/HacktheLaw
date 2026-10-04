@@ -41,6 +41,11 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
     setEvents([]);
     onLoad();
     try {
+      if ('sample' in input && !input.fresh) {
+        onBundle?.({ ...aiBundle, origin: 'cached' });
+        onDone();
+        return;
+      }
       const payload = 'sample' in input
         ? { sample: true, ...(input.fresh ? { fresh: true } : {}) }
         : { files: await Promise.all(input.files.map(encodeFile)) };

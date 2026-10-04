@@ -13,7 +13,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "eval": "tsx scripts/eval.ts",
-    "record:sample": "tsx scripts/record-sample.ts"
+    "record:sample": "tsx scripts/record-sample.ts",
+    "build:cloudflare": "npm run build && npm run typecheck:server && node scripts/build-worker.mjs",
+    "deploy:cloudflare": "npm run build:cloudflare && npx wrangler pages deploy dist --project-name hackthelaw-domino --branch devin/1791112433-domino-demo --commit-dirty=true"
   },
   "dependencies": {
     "mammoth": "^1.13.0",
@@ -29,6 +31,7 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "esbuild": "^0.28.2"
   }
 }
