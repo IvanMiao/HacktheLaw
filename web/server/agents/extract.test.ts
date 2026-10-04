@@ -3,7 +3,7 @@ import type { FactRole } from '../../src/data/bundle';
 import { SAMPLE } from '../../src/data/sample';
 import type { IngestedDoc } from '../ingest';
 import type { LlmClient } from '../providers';
-import { extractCase } from './extract';
+import { extractCase, profileSide } from './extract';
 
 const docs = SAMPLE.docs as IngestedDoc[];
 const profileArgs = {
@@ -128,6 +128,13 @@ describe('extraction tool validation', () => {
     await expect(extract(client)).resolves.toMatchObject({
       profile: { side: 'Defendant (Bâtiself SARL)' },
     });
+  });
+
+  it('normalizes role words in party-side labels and preserves canonical sides', () => {
+    expect(profileSide('BÂTISELF SARL (defendant)', 'Atelier Lumière SAS', 'Bâtiself SARL')).toBe('Defendant (Bâtiself SARL)');
+    expect(profileSide('Bâtiself SARL, défenderesse', 'Atelier Lumière SAS', 'Bâtiself SARL')).toBe('Defendant (Bâtiself SARL)');
+    expect(profileSide('ATELIER LUMIÈRE SAS (claimant)', 'Atelier Lumière SAS', 'Bâtiself SARL')).toBe('Claimant (Atelier Lumière SAS)');
+    expect(profileSide('Defendant (Bâtiself SARL)', 'Atelier Lumière SAS', 'Bâtiself SARL')).toBe('Defendant (Bâtiself SARL)');
   });
 
   it('formats a verified limitation amount and keeps the model amount when absent', async () => {

@@ -83,9 +83,12 @@ function validDate(value: string) {
 
 export function profileSide(side: string, claimant: string, defendant: string) {
   const party = side.trim();
+  if (party.startsWith('Defendant (') || party.startsWith('Claimant (')) return party;
   if (/^defendant(?:\s|$)/iu.test(party) && !/\(.+\)/u.test(party)) return `Defendant (${defendant})`;
   if (/^claimant(?:\s|$)/iu.test(party) && !/\(.+\)/u.test(party)) return `Claimant (${claimant})`;
   const normalized = (value: string) => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  if (/\b(?:defendant|défendeur|défenderesse)\b/iu.test(party)) return `Defendant (${defendant})`;
+  if (/\b(?:claimant|demandeur|demanderesse)\b/iu.test(party)) return `Claimant (${claimant})`;
   if (normalized(party) === normalized(defendant)) return `Defendant (${defendant})`;
   if (normalized(party) === normalized(claimant)) return `Claimant (${claimant})`;
   return party;
