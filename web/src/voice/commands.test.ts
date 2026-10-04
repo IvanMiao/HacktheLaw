@@ -8,9 +8,9 @@ describe('voice safety boundary', () => {
   it('uses per-action schemas: preview has known non-null IDs; reset is null only', () => {
     const schema = INTENT_SCHEMA as unknown as {anyOf?:{properties:{action:{enum:string[]};target:{type:string;enum?:string[]};value:{type:string}}}[]};
     expect(schema.anyOf).toBeInstanceOf(Array);
-    const preview = schema.anyOf!.find(s=>s.properties.action.enum[0]==='preview_scenario')!;
-    expect(preview.properties.target).toMatchObject({type:'string',enum:expect.arrayContaining(['q-email','q-concil'])});
-    expect(preview.properties.value.type).toBe('boolean');
+    const previews = schema.anyOf!.filter(s=>s.properties.action.enum[0]==='preview_scenario');
+    expect(previews.flatMap(s => s.properties.target.enum ?? [])).toEqual(expect.arrayContaining(['q-email','q-concil']));
+    expect(previews.every(s => s.properties.target.type === 'string' && s.properties.value.type === 'boolean')).toBe(true);
     const reset = schema.anyOf!.find(s=>s.properties.action.enum[0]==='reset_scenario')!;
     expect(reset.properties.target.type).toBe('null');
   });

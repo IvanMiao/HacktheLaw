@@ -1,5 +1,4 @@
 const DAY = 86_400_000;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const toDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
 export const toIso = (d: Date) => d.toISOString().slice(0, 10);
@@ -28,10 +27,8 @@ export const fr = (iso: string) => {
   return `${d}/${m}/${y}`;
 };
 
-export const long = (iso: string) => {
-  const d = toDate(iso);
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-};
+export const long = (iso: string, locale: 'en' | 'fr' = 'en') =>
+  new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(toDate(iso));
 
 export const weekday = (iso: string) =>
   ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][toDate(iso).getUTCDay()];

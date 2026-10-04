@@ -1,3 +1,6 @@
+import { useLocale } from '../i18n/useLocale';
+import { useCase } from '../data/CaseContext';
+import { fr } from '../engine/dates';
 import type { CSSProperties } from 'react';
 import type { Anchor } from '../data/case';
 import type { Analysis, AnalysisState, ChainResult, ChainStatus, Counterfactual, Link, NodeKind } from '../engine/chains';
@@ -14,7 +17,8 @@ const KIND: Record<NodeKind, string> = {
 const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken' };
 
 export function StatusPill({ status }: { status: ChainStatus }) {
-  return <span className={`pill pill-${status}`}>{STATUS[status]}</span>;
+  const { t } = useLocale();
+  return <span className={`pill pill-${status}`}>{t(STATUS[status])}</span>;
 }
 
 type Props = {
@@ -23,15 +27,17 @@ type Props = {
 };
 
 export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
+  const { t } = useLocale();
+  const dataset = useCase();
   const selected = analysis.chains.flatMap((c) => c.links).find((l) => l.id === linkId);
   const anyWhatIf = Object.keys(state.whatIf).length > 0;
   return (
     <div className="chains">
       <section className="stress">
         <div className="stress-head">
-          <span className="section-label">Stress-test</span>
-          <span className="muted small">Flip a contested link and watch the dominoes.</span>
-          {anyWhatIf && <button className="linkish small" onClick={onReset}>Reset scenario</button>}
+          <span className="section-label">{t('Stress-test')}</span>
+          <span className="muted small">{t('Flip a contested link and watch the dominoes.')}</span>
+          {anyWhatIf && <button className="linkish small" onClick={onReset}>{t('Reset scenario')}</button>}
         </div>
         <div className="toggles">
           {cfs.map((c) => (
@@ -39,27 +45,35 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
               <input type="checkbox" checked={c.active} onChange={() => onWhatIf(c.qid, c.flipsTo)} />
               <span className="switch" aria-hidden />
               <span>{c.label}</span>
-              {c.effects.map((e) => <span key={e.chain} className="effect">{e.to === 'fails' ? 'breaks' : 'restores'} {e.chain}</span>)}
+              {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
             </label>
           ))}
-          <label className={`toggle ${state.art642 ? 'on' : ''}`}>
+          {dataset.id === 'c1-c2' && <label className={`toggle ${state.art642 ? 'on' : ''}`}>
             <input type="checkbox" checked={state.art642} onChange={on642} />
             <span className="switch" aria-hidden />
-            <span>Extend a weekend expiry (art. 642 CPC)</span>
-            <span className="effect neutral">flag</span>
-          </label>
+            <span>{t('Extend a weekend expiry (art. 642 CPC)')}</span>
+            <span className="effect neutral">{t('flag')}</span>
+          </label>}
         </div>
       </section>
 
+      {analysis.notices && <section className="case-review" aria-label={t('Legal review')}>
+        {analysis.notices.map(notice => <p key={notice} className="callout neutral">{notice}</p>)}
+      </section>}
+      {analysis.timeline && <section className="case-timeline" aria-label={t('Procedural timeline')}>
+        <h3>{t('Procedural timeline')}</h3>
+        <ol>{analysis.timeline.map(event => <li key={event.label}><span>{t(event.label)}</span> <time dateTime={event.date}>{fr(event.date)}</time></li>)}</ol>
+      </section>}
       {analysis.chains.map((c) => <Lane key={c.id} chain={c} selected={linkId} onLink={onLink} />)}
 
       {selected ? <LinkDrawer link={selected} analysis={analysis} onAnchor={onAnchor} onClose={() => onLink(null)} />
-        : <p className="hint muted small">Select a domino to see its rule, inputs and sources.</p>}
+        : <p className="hint muted small">{t('Select a domino to see its rule, inputs and sources.')}</p>}
     </div>
   );
 }
 
 function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
+  const { t } = useLocale();
   const standing = chain.status !== 'fails';
   const broken = chain.links.find((l) => l.status === 'broken');
   return (
@@ -79,9 +93,9 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
           return (
             <li key={l.id} className={`tile s-${l.status} k-${l.kind} ${fallen ? 'fallen' : ''} ${selected === l.id ? 'sel' : ''}`}
               data-out={next?.status ?? 'end'} style={{ '--i': i } as CSSProperties}>
-              <button onClick={() => onLink(l.id)} aria-label={`${KIND[l.kind]}: ${l.title} — ${l.status}`}>
+              <button onClick={() => onLink(l.id)} aria-label={`${t(KIND[l.kind])}: ${l.title} — ${t(l.status.replace('_', ' '))}`}>
                 <span className="tile-top">
-                  <span className="kind">{KIND[l.kind]}</span>
+                  <span className="kind">{t(KIND[l.kind])}</span>
                   {l.kind === 'outcome' ? <span className="pip-out" aria-hidden /> : <Pips n={i + 1} />}
                 </span>
                 <span className="tile-rule" aria-hidden><i /></span>
@@ -90,9 +104,9 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
                   <span>{l.statement}</span>
                 </span>
                 <span className="tile-foot">
-                  {l.status === 'contested' ? <span className="ai-tag">AI-inferred</span>
-                    : l.status === 'broken' ? <span className="breaks">Breaks here</span>
-                    : <span className="mono">{l.rule ?? `${l.anchors.length} source${l.anchors.length > 1 ? 's' : ''}`}</span>}
+                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span>
+                    : l.status === 'broken' ? <span className="breaks">{t('Breaks here')}</span>
+                    : <span className="mono">{l.rule ?? t(l.anchors.length === 1 ? '{count} source' : '{count} sources', { count: l.anchors.length })}</span>}
                 </span>
               </button>
             </li>
@@ -105,40 +119,42 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
 }
 
 function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysis: Analysis; onAnchor: (a: Anchor) => void; onClose: () => void }) {
+  const { t } = useLocale();
+  const dataset = useCase();
   const regime = link.regime && REGIMES[link.regime];
   return (
-    <aside className="drawer" aria-label="Link detail">
+    <aside className="drawer" aria-label={t('Link detail')}>
       <header>
-        <span className="eyebrow">{KIND[link.kind]} · <span className={`st st-${link.status}`}>{link.status.replace('_', ' ')}</span></span>
-        <button className="icon-btn" onClick={onClose} aria-label="Close">×</button>
+        <span className="eyebrow">{t(KIND[link.kind])} · <span className={`st st-${link.status}`}>{t(link.status.replace('_', ' '))}</span></span>
+        <button className="icon-btn" onClick={onClose} aria-label={t('Close')}>×</button>
       </header>
       <h3>{link.title}</h3>
       <p className="statement">{link.statement}</p>
       <div className="drawer-grid">
         <div>
-          {link.rule && <div className="kv"><span>Rule</span><span>{link.rule}</span></div>}
+          {link.rule && <div className="kv"><span>{t('Rule')}</span><span>{link.rule}</span></div>}
           {link.computed && (
             <table className="calc"><tbody>
               {link.computed.map(([k, v]) => <tr key={k}><th>{k}</th><td className="mono">{v}</td></tr>)}
             </tbody></table>
           )}
-          <div className="kv"><span>Sources</span><span className="chips">{link.anchors.map((a) => <SourceChip key={a.quote} anchor={a} onAnchor={onAnchor} />)}</span></div>
+          <div className="kv"><span>{t('Sources')}</span><span className="chips">{link.anchors.map((a) => <SourceChip key={a.quote} anchor={a} onAnchor={onAnchor} />)}</span></div>
         </div>
         <div>
-          {link.status === 'broken' && link.brokenReason && <div className="callout green"><strong>Chain breaks here.</strong> {link.brokenReason}</div>}
-          {link.contrast && <div className="callout neutral"><strong>Regime contrast.</strong> {link.contrast}</div>}
-          {link.status === 'contested' && <div className="callout violet"><strong>Contested.</strong> Depends on an AI-inferred qualification awaiting lawyer review.</div>}
+          {link.status === 'broken' && link.brokenReason && <div className="callout green"><strong>{t('Chain breaks here.')}</strong> {link.brokenReason}</div>}
+          {link.contrast && <div className="callout neutral"><strong>{t('Regime contrast.')}</strong> {link.contrast}</div>}
+          {link.status === 'contested' && <div className="callout violet"><strong>{t('Contested.')}</strong> {t('Depends on an AI-inferred qualification awaiting lawyer review.')}</div>}
         </div>
       </div>
       {regime && (
         <table className="regime">
-          <thead><tr><th>Sanction</th><th>When to raise</th><th>Prejudice</th><th>Curable</th><th>Own motion</th><th>Interruption</th></tr></thead>
-          <tbody><tr><td>{regime.name}</td><td>{regime.when}</td><td>{regime.prejudice}</td><td>{regime.curable}</td><td>{regime.ownMotion}</td><td>{regime.interruption}</td></tr></tbody>
+          <thead><tr><th>{t('Sanction')}</th><th>{t('When to raise')}</th><th>{t('Prejudice')}</th><th>{t('Curable')}</th><th>{t('Own motion')}</th><th>{t('Interruption')}</th></tr></thead>
+          <tbody><tr><td>{t(regime.name)}</td><td>{t(regime.when)}</td><td>{t(regime.prejudice)}</td><td>{t(regime.curable)}</td><td>{t(regime.ownMotion)}</td><td>{t(regime.interruption)}</td></tr></tbody>
         </table>
       )}
-      {link.kind === 'consequence' && (
+      {dataset.id === 'c1-c2' && link.kind === 'consequence' && (
         <div className="deadline">
-          <div className="section-label">Limitation calculation</div>
+          <div className="section-label">{t('Limitation calculation')}</div>
           <DeadlineTrack lim={analysis.limitation} />
           <ol className="steps">
             {analysis.limitation.steps.map((s, i) => (
