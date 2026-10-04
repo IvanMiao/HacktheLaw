@@ -2,9 +2,9 @@
 
 The demo combines the original C1/C2 case, selectable C3/C4/C5 synthetic cases, AI analysis of uploaded documents, the English/French interface, intro film and continuous realtime Mistral voice commands. Facts, Chains, Memo, source highlighting, sample/upload flow and manual lawyer review are preserved. Legal rules and synthetic scenarios require lawyer review.
 
-The default welcome screen retains the intro film, cached sample and document-upload flow. The case bundle carries analysis through the browser engine; uploaded documents are analyzed through Domino's local API. Source documents stay in their original French, while the interface, analysis and copied memo support English and French. Language changes preserve review state; changing cases clears it.
+The default welcome screen retains the intro film, cached sample and document-upload flow. The case bundle carries analysis through the browser engine; uploaded documents are analyzed through Domino's local API. Source documents stay in their original French, while the interface, analysis and copied memo support English and French. Language changes preserve review state; changing cases clears the temporary scenario and loads only reviews saved for that case version.
 
-Original shortcuts: `1`/`2`/`3` modes, `J`/`K` facts, `C`/`R` manual confirm/reject, `P` presenter mode, and `Esc` to close the drawer. Example URLs: `?mode=chains&link=c1-cons`, `?mode=chains&confirmed&whatif=q-email`, and `?lang=fr` or `?lang=en`.
+Original shortcuts: `1`/`2`/`3` modes, `J`/`K` facts, `C` use the interpretation / `R` open its editor, `P` presenter mode, and `Esc` to close the drawer. Example URLs: `?mode=chains&link=c1-cons`, `?mode=chains&confirmed&whatif=q-email`, and `?lang=fr` or `?lang=en`.
 
 The two Cour de cassation decisions in `../data/caselaw/` are real. Case files, statutory excerpts and the Cass. 2e civ. authority for chain C1 are mock sources labelled as such in the UI.
 
@@ -82,4 +82,7 @@ Human microphone acceptance is pending the user's test. No external push, merge 
 
 Plans: `docs/VOICE_DEVELOPMENT_PLAN.md`, `docs/CASE_INTEGRATION_PLAN.md`; case verification: `docs/CASE_INTEGRATION_VERIFICATION.md`.
 
-Original shortcuts:1/2/3 modes, J/K facts, C/R manual confirm/reject, P presenter, Esc drawer. Inputs do not trigger legal-review shortcuts. Real Cassation PDFs remain labeled real; synthetic case/statutory/C1 authority excerpts remain mocks requiring review.
+Original shortcuts:1/2/3 modes, J/K facts, C use / R edit interpretation, P presenter, Esc drawer. Inputs do not trigger legal-review shortcuts. Real Cassation PDFs remain labeled real; synthetic case/statutory/C1 authority excerpts remain mocks requiring review.
+
+
+Qualification controls offer **Use this interpretation**, **Modify interpretation**, and **To verify**. Modifications explicitly select an answer and record a reason before recalculation. Pending reviews retain the candidate interpretation without treating it as established. Notes and evidence-request drafts appear in the memo; requests are not sent. Reviews are stored for the current version of a CaseBundle, while what-if scenarios remain temporary.

@@ -1,9 +1,10 @@
 import { useLocale } from '../i18n/useLocale';
 import { useBundle } from '../data/useBundle';
 import type { Anchor, Fact } from '../data/bundle';
-import { value, type Analysis, type AnalysisState, type Counterfactual, type Decision } from '../engine/chains';
+import { value, type Analysis, type AnalysisState, type ReviewEntry, type Decision } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
+import { ReviewControls } from './ReviewControls';
 
 function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
   const { t } = useLocale();
@@ -18,6 +19,7 @@ function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
       {whatIf ? t('What-if: ') : ''}{t(v ? q.yes : q.no)}
       {d === 'confirmed' && !whatIf && <span className="tick" aria-label={t('confirmed')}> ✓</span>}
       {d === 'rejected' && !whatIf && <span className="cross" aria-label={t('rejected')}> ✕</span>}
+      {d === 'pending' && !whatIf && <span className="review-pending"> · {t('To verify')}</span>}
     </span>
   );
 }
@@ -46,16 +48,17 @@ export function FactList({ state, selected, onSelect }: { state: AnalysisState; 
 }
 
 type DetailProps = {
-  fact: Fact; state: AnalysisState; analysis: Analysis; cfs: Counterfactual[];
+  fact: Fact; state: AnalysisState; analysis: Analysis;
   onDecide: (qid: string, d: Decision) => void; onAnchor: (a: Anchor) => void; onOpenLink: (id: string) => void;
+  onAdopt: (qid: string, interpretation: boolean, review: ReviewEntry) => void;
+  onSaveReview: (qid: string, review: ReviewEntry) => void;
 };
 
-export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onOpenLink }: DetailProps) {
+export function FactDetail({ fact, state, analysis, onDecide, onAnchor, onOpenLink, onAdopt, onSaveReview }: DetailProps) {
   const { t } = useLocale();
   const { bundle, qualOf } = useBundle();
   const q = fact.qualification ? qualOf(fact.qualification) : undefined;
-  const decision = q && state.decisions[q.id];
-  const cf = q && cfs.find((c) => c.qid === q.id);
+  const preview = Object.keys(state.whatIf).length > 0;
   const quotes = new Set(fact.anchors.map((a) => a.quote));
   const usedIn = analysis.chains.flatMap((c) =>
     c.links.filter((l) => l.anchors.some((a) => quotes.has(a.quote)) || (q && l.deps.includes(q.id))).map((l) => ({ chain: c.id, link: l })));
@@ -82,20 +85,13 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
           </div>
           <p className="question">{t(q.question)}</p>
           <p className="answer"><QualBadge qid={q.id} state={state} /></p>
-          <p className="reasoning">{t(q.reasoning)}</p>
+          <p className="reasoning">{q.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[q.id] !== undefined && state.reviews[q.id]?.note ? state.reviews[q.id].note : t(q.reasoning)}</p>
           <p className="muted small">{t('Basis:')} {t(q.rule)}</p>
           {fact.role === 'formal_notice' && <div className="callout neutral"><strong>{t('Does not interrupt.')}</strong> {t('A common misconception: an ordinary mise en demeure leaves the limitation date unchanged.')}</div>}
-          <div className="actions">
-            <button className={`btn ${decision === 'confirmed' ? 'primary' : ''}`} onClick={() => onDecide(q.id, decision === 'confirmed' ? 'proposed' : 'confirmed')}>
-              {decision === 'confirmed' ? t('Confirmed ✓') : t('Confirm')} <kbd>C</kbd>
-            </button>
-            <button className={`btn ${decision === 'rejected' ? 'danger' : ''}`} onClick={() => onDecide(q.id, decision === 'rejected' ? 'proposed' : 'rejected')}>
-              {decision === 'rejected' ? t('Rejected ✕') : t('Reject')} <kbd>R</kbd>
-            </button>
-            {cf && cf.effects.length > 0 && (
-              <span className="impact">{t('If')} {t(decision === 'rejected' ? 'restored' : 'rejected')} : {cf.effects.map((e) => `${t(e.to === 'fails' ? 'breaks' : 'restores')} ${e.chain}`).join(', ')}</span>
-            )}
-          </div>
+          <ReviewControls key={q.id} qualification={q} decision={state.decisions[q.id]} interpretation={value(bundle, state, q.id)}
+            review={state.reviews[q.id] ?? { note: '', nextStep: '' }} preview={preview}
+            onAdopt={(interpretation, review) => onAdopt(q.id, interpretation, review)} onPending={() => onDecide(q.id, 'pending')}
+            onSave={(review) => onSaveReview(q.id, review)} />
         </section>
       )}
 

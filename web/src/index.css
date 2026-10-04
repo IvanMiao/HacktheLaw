@@ -137,6 +137,18 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1p
 .question { font-weight: 600; }
 .reasoning { color: var(--ink-2); }
 .actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.lawyer-review .review-editor { display: grid; gap: 8px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.lawyer-review label { font-size: 12px; font-weight: 600; }
+.lawyer-review textarea, .lawyer-review select { width: 100%; min-width: 0; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 5px; padding: 8px; }
+.lawyer-review textarea { resize: vertical; }
+.lawyer-review textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lawyer-review :disabled { cursor: not-allowed; opacity: .65; }
+.review-saved { font-size: 12px; margin-top: 10px; }
+.review-saved summary { cursor: pointer; }
+.review-saved p { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-error { color: var(--red); font-size: 12px; }
+.review-pending, .pill-pending { color: var(--amber); }
+.tile.s-pending > button { border-color: var(--amber); border-style: dashed; background: var(--amber-bg); }
 .impact { font-size: 12px; color: var(--amber); margin-left: 6px; }
 .btn { border: 1px solid var(--line-2); background: var(--card); border-radius: 7px; padding: 6px 12px; font-weight: 500; }
 .btn:hover { border-color: var(--ink-2); }

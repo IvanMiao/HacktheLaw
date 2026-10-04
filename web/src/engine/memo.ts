@@ -7,6 +7,20 @@ import { english, type Translator } from '../i18n/translate.js';
 export type Part = string | Anchor;
 export type Block = { t: 'h1' | 'h2' | 'h3' | 'p' | 'li' | 'note'; parts: Part[] };
 
+function appendReviews(blocks: Block[], bundle: CaseBundle, state: AnalysisState, t: Translator) {
+  const facts = bundle.facts.filter((fact) => fact.verified);
+  const saved = { ...state, whatIf: {} };
+  bundle.qualifications.forEach((qualification) => {
+    const review = state.reviews[qualification.id];
+    if (!(qualification.id in state.interpretations) && state.decisions[qualification.id] !== 'pending' && !review) return;
+    blocks.push({ t: 'li', parts: [t(state.decisions[qualification.id] === 'pending' ? 'To verify — {question}: {answer}.' : 'Saved interpretation — {question}: {answer}.', {
+      question: t(qualification.question), answer: t(value(bundle, saved, qualification.id) ? qualification.yes : qualification.no),
+    }), ...(facts.find((fact) => fact.id === qualification.factId)?.anchors ?? [])] });
+    if (review?.note) blocks.push({ t: 'p', parts: [t('Lawyer note: {note}', { note: review.note })] });
+    if (review?.nextStep) blocks.push({ t: 'p', parts: [t('Next action: {action}', { action: review.nextStep })] });
+  });
+}
+
 export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: AnalysisState, t: Translator = english): Block[] {
   if (bundle.preset) {
     const blocks: Block[] = [
@@ -30,8 +44,9 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
     blocks.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
     for (const notice of analysis.notices ?? []) blocks.push({ t: 'note', parts: [notice] });
     for (const qualification of bundle.qualifications) {
-      blocks.push({ t: 'li', parts: [`${t(qualification.question)} — ${t(value(bundle, state, qualification.id) ? qualification.yes : qualification.no)}. ${t(qualification.reasoning)}`] });
+      blocks.push({ t: 'li', parts: [`${t(qualification.question)} — ${t(value(bundle, state, qualification.id) ? qualification.yes : qualification.no)}. ${qualification.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[qualification.id] !== undefined && state.reviews[qualification.id]?.note ? state.reviews[qualification.id].note : t(qualification.reasoning)}`] });
     }
+    appendReviews(blocks, bundle, state, t);
     if (Object.keys(state.whatIf).length) blocks.push({ t: 'note', parts: [t('What-if scenario — lawyer decisions unchanged.')] });
     return blocks;
   }
@@ -45,8 +60,10 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   const live = analysis.chains.filter((chain) => chain.status === 'holds' || chain.status === 'contested')
     .sort((x, y) => x.hingesOn.length - y.hingesOn.length);
   const dead = analysis.chains.filter((chain) => chain.status === 'fails');
+  const pending = analysis.chains.filter((chain) => chain.status === 'pending');
 
   b.push({ t: 'h1', parts: [t('Defence memo — {title}', { title: t(profile.title) })] });
+  if (Object.keys(state.whatIf).length) b.push({ t: 'note', parts: [t('Temporary scenario — saved interpretations are unchanged.')] });
   b.push({ t: 'h2', parts: [t('1. Case summary')] });
   const rawSide = typeof profile.side === 'string' ? profile.side : profile.side.en;
   const represented = /^(Defendant|Claimant) \((.+)\)$/.exec(rawSide);
@@ -77,7 +94,7 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
 
   b.push({ t: 'h2', parts: [t('2. Defences, in procedural order')] });
   b.push({ t: 'p', parts: [t('No exception de procédure requiring to be raised in limine litis was identified. The grounds below are fins de non-recevoir: they may be raised at any stage (art. 123 CPC) without proof of prejudice (art. 124 CPC). We nevertheless recommend raising them in the first written submissions.')] });
-  if (!live.length) b.push({ t: 'note', parts: [t('In the current scenario, no ground holds among the enabled chains.')] });
+  if (!live.length) b.push({ t: 'note', parts: [t(pending.length ? 'Grounds awaiting verification' : 'In the current scenario, no ground holds among the enabled chains.')] });
   live.forEach((chain, i) => {
     b.push({ t: 'h3', parts: [t('Ground {letter} — {outcome}{independent}', {
       letter: String.fromCharCode(65 + i), outcome: chain.outcome, independent: live.length > 1 ? t(' (independent of the other ground)') : '',
@@ -100,10 +117,11 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
       title: chain.title, link: broken?.title ?? '', reason: broken?.brokenReason ?? '',
     })] });
   });
+  pending.forEach((chain) => b.push({ t: 'note', parts: [t('Pending verification — {title}.', { title: chain.title })] }));
 
   b.push({ t: 'h2', parts: [t('3. Next steps')] });
   const defences = t(live.length > 1 ? 'both fins de non-recevoir' : live.length ? 'the fin de non-recevoir' : 'our defences');
-  b.push({ t: 'li', parts: [profile.nextHearing
+  b.push({ t: 'li', parts: [pending.length && !live.length ? t('Resolve the pending interpretations before relying on these grounds.') : profile.nextHearing
     ? t('Serve written submissions raising {defences} before the hearing of {date} ({days} days).', {
       defences, date: fr(profile.nextHearing), days: days!,
     })
@@ -112,7 +130,8 @@ export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: Analysi
   if (live.some((chain) => chain.id === 'C1') && sanction) b.push({ t: 'li', parts: [t('Produce the registry record and the order of caducité of {date} as exhibits.', { date: fr(sanction.date) })] });
 
   b.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
-  analysis.contestedQuals.forEach((qid) => b.push({ t: 'li', parts: [t('AI-inferred, not yet confirmed: {question}', { question: t(qualOf(bundle, qid).question) })] }));
+  analysis.contestedQuals.forEach((qid) => b.push({ t: 'li', parts: [t(state.decisions[qid] === 'pending' ? 'To verify: {question}' : 'AI-inferred, not yet confirmed: {question}', { question: t(qualOf(bundle, qid).question) })] }));
+  appendReviews(b, bundle, state, t);
   if (facts.some((fact) => fact.role === 'writ_sanction')) b.push({ t: 'li', parts: [t('Replace the placeholder Cass. 2e civ. authority on caducité and interruption (C1).')] });
   b.push({ t: 'li', parts: [t('Check statutory excerpts against the current Légifrance versions (arts. 857, 122–126 CPC; arts. 2224–2243 C. civ.).')] });
   if (state.art642) b.push({ t: 'li', parts: [t('Confirm whether art. 642 CPC applies to the limitation period (affects 15/03 vs 16/03/2026).')] });
