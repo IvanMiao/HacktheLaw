@@ -369,6 +369,11 @@ html[lang='fr'] .tile-body strong { font-size: 12px; }
   .modes button { padding: 5px 7px; }
 }
 
-.party-view { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; color: var(--muted); }
-.party-view select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }
+.party-switch { display: inline-flex; flex: 0 0 auto; min-width: 0; margin: 0 0 0 auto; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); }
+.party-switch label { position: relative; cursor: pointer; }
+.party-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.party-switch span { display: block; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--muted); pointer-events: none; }
+.party-switch input:checked + span { color: var(--card); background: var(--ink); }
+.party-switch input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 3px; }
+.party-switch label:hover input:not(:checked) + span { color: var(--ink); }
 .lane-perspective { margin: 0 0 12px; font-size: 12px; color: var(--ink-2); }

@@ -246,11 +246,6 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           </select>
           <span className="b-prov qbadge provenance-chip">{provenance}</span>
         </div>
-        <label className="party-view"><span>{t('Representing')}</span>
-          <select aria-label={t('Representing')} value={side} onChange={(event) => changeSide(event.target.value as PartySide)}>
-            {(['claimant', 'defendant'] as const).map((role) => <option key={role} value={role}>{sideLabel(bundle, role, t)}</option>)}
-          </select>
-        </label>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([currentMode, label], i) => (
             <button key={currentMode} className={mode === currentMode ? 'on' : ''} onClick={() => setMode(currentMode)}>{t(label)}<kbd>{i + 1}</kbd></button>
@@ -288,6 +283,14 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
         {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) requiring reassessment', { count: pendingReviews })}</span>}
         {hasReviews(state) && <span className="banner-secondary"><button className="linkish" onClick={resetReviewState}>{t('Reset reviews')}</button></span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
+        <fieldset className="party-switch" aria-label={t('Representing')}>
+          {(['claimant', 'defendant'] as const).map((role) => (
+            <label key={role}>
+              <input type="radio" name="party-side" value={role} checked={side === role} onChange={() => changeSide(role)} />
+              <span>{sideLabel(bundle, role, t)}</span>
+            </label>
+          ))}
+        </fieldset>
       </div>
 
       {isDemo ? <VoicePanel key={bundle.id} context={voiceContext} onIntent={runVoiceIntent} />
