@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "voice:server": "bun server/index.ts",
+    "voice:smoke": "node scripts/live-smoke.mjs",
+    "typecheck:server": "tsc -p tsconfig.server.json",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",

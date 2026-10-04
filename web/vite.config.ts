@@ -6,6 +6,15 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, loadEnv(mode, process.cwd(), ''))
   return {
     plugins: [react(), dominoApi()],
-    server: { fs: { allow: ['..'] }, allowedHosts: true },
+    server: {
+      fs: { allow: ['..'] },
+      allowedHosts: true,
+      proxy: {
+        '/api/realtime': { target: 'http://127.0.0.1:8788', ws: true },
+        '/api/intent': 'http://127.0.0.1:8787',
+        '/api/transcribe': 'http://127.0.0.1:8787',
+        '/api/status': 'http://127.0.0.1:8787',
+      },
+    },
   }
 })

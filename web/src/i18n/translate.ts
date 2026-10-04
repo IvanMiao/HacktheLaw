@@ -1,5 +1,6 @@
 import { french } from './fr.js';
 import type { Text } from '../data/bundle.js';
+import { casesFrench } from './casesFr.js';
 
 export type Locale = 'en' | 'fr';
 export type Translator = (text: Text, values?: Record<string, string | number>) => string;
@@ -7,7 +8,7 @@ export type Translator = (text: Text, values?: Record<string, string | number>) 
 export function translator(locale: Locale): Translator {
   return (text, values = {}) => {
     const value = typeof text === 'string' ? text : text[locale];
-    const template = locale === 'fr' ? french[value] ?? value : value;
+    const template = locale === 'fr' ? french[value] ?? casesFrench[value] ?? value : value;
     return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => String(values[key] ?? placeholder));
   };
 }

@@ -24,7 +24,7 @@ export type Fact = {
 export type QualKind = 'conciliation_clause' | 'acknowledgment' | 'formal_notice' | 'writ_outcome' | 'conciliation_attempted';
 
 export type Qualification = {
-  id: string; kind: QualKind; factId: string;
+  id: string; kind: QualKind | 'preset'; factId: string;
   question: Text; proposed: boolean; yes: Text; no: Text;
   source: 'rule' | 'ai_inferred'; confidence: 'high' | 'medium' | 'low';
   rule: string; reasoning: Text; whatIfLabel: Text;
@@ -43,7 +43,7 @@ export type CaseProfile = {
 export type AgentEvent = { at: number; stage: 'ingest' | 'extract' | 'qualify' | 'engine' | 'memo'; kind: 'tool' | 'note' | 'warn' | 'error'; text: string };
 
 export type CaseBundle = {
-  id: string; origin: 'cached' | 'ai';
+  id: string; origin: 'cached' | 'ai'; preset?: 'c3' | 'c4' | 'c5';
   provider?: string; models?: Record<string, string>; generatedAt?: string;
   usage?: Record<string, { input: number; output: number; reasoning: number }>;
   steps?: number;
@@ -53,7 +53,12 @@ export type CaseBundle = {
 };
 
 export function allDocs(bundle: CaseBundle): Doc[] {
-  return [...bundle.docs, ...libraryDocs];
+  const docs = new Map(bundle.docs.map((doc) => [doc.id, doc]));
+  for (const doc of libraryDocs) {
+    const existing = docs.get(doc.id);
+    docs.set(doc.id, existing ? { ...existing, ...doc, text: doc.text || existing.text } : doc);
+  }
+  return [...docs.values()];
 }
 
 export function docOf(bundle: CaseBundle, id: string): Doc {

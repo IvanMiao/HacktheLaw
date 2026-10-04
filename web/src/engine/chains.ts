@@ -1,4 +1,5 @@
 import { english, type Translator } from '../i18n/translate.js';
+import { analyseAdditional } from './additionalChains.js';
 import { factOf, qualOf, type Anchor, type CaseBundle, type Fact, type Qualification } from '../data/bundle.js';
 import { addDays, daysBetween, fr } from './dates.js';
 import { computeLimitation, type LimitationEvent, type LimitationResult } from './limitation.js';
@@ -42,7 +43,13 @@ export type ChainResult = {
   outcome: string; hingesOn: string[]; missing?: string[];
 };
 
-export type Analysis = { chains: ChainResult[]; limitation: LimitationResult | null; contestedQuals: string[] };
+export type Analysis = {
+  chains: ChainResult[];
+  limitation: LimitationResult | null;
+  contestedQuals: string[];
+  notices?: string[];
+  timeline?: { label: string; date: string }[];
+};
 
 type FactQualification = { fact: Fact; qualification: Qualification };
 type PlacementRule = { days: number; rule: string; anchors: Anchor[] };
@@ -132,6 +139,7 @@ export function isContested(bundle: CaseBundle, state: AnalysisState, qid: strin
 }
 
 export function limitationFor(bundle: CaseBundle, state: AnalysisState, t: Translator = english): LimitationResult | null {
+  if (bundle.preset) return null;
   const derived = deriveCase(bundle);
   if (!derived.limitationStart) return null;
   const events: LimitationEvent[] = [
@@ -271,6 +279,7 @@ function unavailable(id: string, title: string, subtitle: string, outcome: strin
 }
 
 export function analyse(bundle: CaseBundle, state: AnalysisState, t: Translator = english): Analysis {
+  if (bundle.preset) return analyseAdditional(bundle, state, t);
   const derived = deriveCase(bundle);
   const lim = limitationFor(bundle, state, t);
   const c1Title = t('Writ lapse → limitation');

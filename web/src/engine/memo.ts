@@ -1,13 +1,40 @@
-import { docOf, qualOf, type Anchor, type CaseBundle } from '../data/bundle';
-import { deriveCase, value, type Analysis, type AnalysisState } from './chains';
-import { daysBetween, fr } from './dates';
-import { REGIMES } from './regimes';
-import { english, type Translator } from '../i18n/translate';
+import { docOf, qualOf, type Anchor, type CaseBundle } from '../data/bundle.js';
+import { deriveCase, value, type Analysis, type AnalysisState } from './chains.js';
+import { daysBetween, fr } from './dates.js';
+import { REGIMES } from './regimes.js';
+import { english, type Translator } from '../i18n/translate.js';
 
 export type Part = string | Anchor;
 export type Block = { t: 'h1' | 'h2' | 'h3' | 'p' | 'li' | 'note'; parts: Part[] };
 
 export function buildMemo(bundle: CaseBundle, analysis: Analysis, state: AnalysisState, t: Translator = english): Block[] {
+  if (bundle.preset) {
+    const blocks: Block[] = [
+      { t: 'h1', parts: [t('Defence memo — {title}', { title: t(bundle.profile.title) })] },
+      { t: 'note', parts: [t('SYNTHETIC — fictional evidence; deterministic draft, not legal advice.')] },
+      { t: 'p', parts: [t(bundle.profile.side), ' · ', bundle.profile.court, ' · ', t(bundle.profile.summary ?? '')] },
+      { t: 'h2', parts: [t('1. Case summary')] },
+      ...bundle.facts.map((fact) => ({ t: 'li' as const, parts: [`${fr(fact.date)} — ${t(fact.summary)} `, ...fact.anchors] })),
+      { t: 'h2', parts: [t('2. Defences, in procedural order')] },
+    ];
+    for (const chain of analysis.chains) {
+      blocks.push({ t: 'h3', parts: [`${chain.id} — ${chain.title} · ${t(chain.status)}`] });
+      for (const link of chain.links) {
+        blocks.push({ t: 'li', parts: [`${link.title}: ${link.statement} [${t(link.status.replace('_', ' '))}]${link.rule ? ` (${link.rule})` : ''} `, ...link.anchors] });
+      }
+      const broken = chain.links.find((link) => link.status === 'broken');
+      if (broken) blocks.push({ t: 'note', parts: [broken.brokenReason ?? ''] });
+      const regime = chain.links.find((link) => link.regime)?.regime;
+      if (regime) blocks.push({ t: 'p', parts: Object.values(REGIMES[regime]).map((text) => `${t(text)} · `) });
+    }
+    blocks.push({ t: 'h2', parts: [t('4. Points for lawyer review')] });
+    for (const notice of analysis.notices ?? []) blocks.push({ t: 'note', parts: [notice] });
+    for (const qualification of bundle.qualifications) {
+      blocks.push({ t: 'li', parts: [`${t(qualification.question)} — ${t(value(bundle, state, qualification.id) ? qualification.yes : qualification.no)}. ${t(qualification.reasoning)}`] });
+    }
+    if (Object.keys(state.whatIf).length) blocks.push({ t: 'note', parts: [t('What-if scenario — lawyer decisions unchanged.')] });
+    return blocks;
+  }
   const b: Block[] = [];
   const { profile } = bundle;
   const facts = bundle.facts.filter((fact) => fact.verified);

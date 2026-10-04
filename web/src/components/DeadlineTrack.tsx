@@ -9,7 +9,7 @@ const W = 720, PAD = 24, BAR_Y = 70;
 export function DeadlineTrack({ lim }: { lim: LimitationResult | null }) {
   const { t } = useLocale();
   const { bundle, factOf } = useBundle();
-  if (!lim) return null;
+  if (!lim || bundle.preset) return null;
   const derived = deriveCase(bundle);
   const start = derived.limitationStart?.date;
   if (!start) return null;

@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BundleProvider } from './data/BundleProvider';
 import { useBundle } from './data/useBundle';
 import { SAMPLE } from './data/sample';
 import type { Anchor, CaseBundle } from './data/bundle';
+import { PRESETS, getCase, type CaseId } from './data/catalog';
+import { createCaseSession, type CaseSession } from './data/caseSession';
 import { analyse, counterfactuals, initialState, type AnalysisState, type Decision } from './engine/chains';
 import { daysBetween, long } from './engine/dates';
 import { useLocale } from './i18n/useLocale';
 import { ChainsView } from './components/Chains';
+import { DisabledVoicePanel, VoicePanel } from './components/VoicePanel';
+import { buildContext, applyIntent, caseIdForBundle, describeIntent } from './voice/commands';
+import { validateIntent, type Intent } from './voice/contract';
 import { FactDetail, FactList } from './components/Facts';
 import { LanguageSwitch } from './components/LanguageSwitch';
 import { Logo } from './components/Glyphs';
@@ -18,29 +23,49 @@ type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
-  const [bundle, setBundle] = useState<CaseBundle>(SAMPLE);
+  const [caseId, setCaseId] = useState<CaseId>(() => {
+    const requested = new URLSearchParams(location.search).get('case');
+    return PRESETS.find((preset) => preset.id === requested)?.id as CaseId ?? 'c1-c2';
+  });
+  const [bundle, setBundle] = useState<CaseBundle>(() => caseId === 'c1-c2' ? SAMPLE : getCase(caseId));
   const [hasLoaded, setHasLoaded] = useState(false);
   const [fallbackMessage, setFallbackMessage] = useState('');
+  const [activeCase] = useState(() => createCaseSession(caseId));
+  const switchBundle = (next: CaseBundle) => {
+    if (next.id === bundle.id) return;
+    const nextCaseId = caseIdForBundle(next);
+    activeCase.select(nextCaseId);
+    const url = new URL(location.href);
+    if (next.preset) url.searchParams.set('case', next.id);
+    else url.searchParams.delete('case');
+    ['confirmed','whatif','doc','link'].forEach(key => url.searchParams.delete(key));
+    history.replaceState(null, '', url);
+    setCaseId(nextCaseId);
+    setBundle(next);
+  };
   return <BundleProvider bundle={bundle}><AppContent
     key={bundle.id}
-    onBundle={setBundle}
-    initialReady={hasLoaded}
+    onBundle={switchBundle}
+    initialReady={hasLoaded || !!bundle.preset}
     onLoaded={() => setHasLoaded(true)}
     fallbackMessage={fallbackMessage}
     onFallback={setFallbackMessage}
     onClearFallback={() => setFallbackMessage('')}
+    activeCase={activeCase}
   /></BundleProvider>;
 }
 
-function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback }: {
+function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback, activeCase }: {
   onBundle: (bundle: CaseBundle) => void;
   initialReady: boolean;
   onLoaded: () => void;
   fallbackMessage: string;
   onFallback: (message: string) => void;
   onClearFallback: () => void;
+  activeCase: CaseSession;
 }) {
   const { bundle, docs, factOf, qualOf } = useBundle();
+  const caseToken = activeCase.identity();
   const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
@@ -115,6 +140,31 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
     if (link?.anchors[0]) showAnchor(link.anchors[0]);
   };
 
+  const selectedCaseId = caseIdForBundle(bundle);
+  const isDemo = selectedCaseId === 'c1-c2' || !!bundle.preset;
+  const voiceContext = useMemo(() => buildContext(state, bundle), [state, bundle]);
+  const latestState = useRef(state);
+  useEffect(() => { latestState.current = state; }, [state, bundle]);
+  const runVoiceIntent = (raw: Intent): string => {
+    activeCase.assert(caseToken);
+    const current = latestState.current;
+    const intent = validateIntent(raw, buildContext(current, bundle));
+    const next = applyIntent(current, intent, bundle, activeCase.identity().caseId);
+    if (next !== current) setState((s) => applyIntent(s, intent, bundle, activeCase.identity().caseId));
+    if (intent.action === 'preview_scenario' || intent.action === 'challenge_defence') setMode('chains');
+    if (intent.action === 'show_mode') setMode(intent.target as Mode);
+    if (intent.action === 'explain_link') {
+      const chain = analysis.chains.find(c => c.id === intent.target);
+      openLink(chain?.links[0].id ?? intent.target);
+    }
+    if (intent.action === 'show_evidence') {
+      const found = [...bundle.facts.flatMap((item) => item.anchors), ...analysis.chains.flatMap((chain) => chain.links.flatMap((link) => link.anchors))].find((a) => a.doc === intent.target);
+      if (found) showAnchor(found);
+      else { setDocId(intent.target!); setAnchor(null); setViewerOpen(true); }
+    }
+    return describeIntent(next, intent, bundle);
+  };
+
   useEffect(() => {
     if (currentStage !== 'ready') return;
     const onKey = (event: KeyboardEvent) => {
@@ -163,8 +213,17 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
-        <div className="case-name">{t(bundle.profile.title)}</div>
-        <span className="b-prov qbadge provenance-chip">{provenance}</span>
+        <div className="case-name">
+            <select aria-label={t('Case')} value={selectedCaseId} onChange={(event) => {
+            const selected = event.target.value;
+            onBundle(selected === 'c1-c2' ? SAMPLE : getCase(selected as CaseId));
+          }}>
+            <option value="c1-c2">{t('SAMPLE')} · {t(SAMPLE.profile.title)}</option>
+            {PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.id.toUpperCase()} · {t(preset.profile.title)}</option>)}
+            {!isDemo && <option value={bundle.id}>{t(bundle.profile.title)}</option>}
+          </select>
+          <span className="b-prov qbadge provenance-chip">{provenance}</span>
+        </div>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([currentMode, label], i) => (
             <button key={currentMode} className={mode === currentMode ? 'on' : ''} onClick={() => setMode(currentMode)}>{t(label)}<kbd>{i + 1}</kbd></button>
@@ -194,12 +253,17 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           </div>
         )}
         <span className="b-dot" />
-        <strong>{grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
+        <strong>{bundle.preset
+          ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
+          : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
           : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
         {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>
+
+      {isDemo ? <VoicePanel key={bundle.id} context={voiceContext} onIntent={runVoiceIntent} />
+        : <DisabledVoicePanel />}
 
       <div className="body">
         {mode !== 'chains' && <aside className="col left"><FactList state={state} selected={factId} onSelect={(id) => { selectFact(id); if (mode !== 'facts') setMode('facts'); }} /></aside>}

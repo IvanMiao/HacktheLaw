@@ -1,4 +1,6 @@
 import { useLocale } from '../i18n/useLocale';
+import { useBundle } from '../data/useBundle';
+import { fr } from '../engine/dates';
 import type { CSSProperties } from 'react';
 import type { Anchor } from '../data/bundle';
 import type { Analysis, AnalysisState, ChainResult, ChainStatus, Counterfactual, Link, NodeKind } from '../engine/chains';
@@ -26,6 +28,7 @@ type Props = {
 
 export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
   const { t } = useLocale();
+  const { bundle } = useBundle();
   const selected = analysis.chains.flatMap((c) => c.links).find((l) => l.id === linkId);
   const anyWhatIf = Object.keys(state.whatIf).length > 0;
   return (
@@ -44,14 +47,21 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
               {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
             </label>
           ))}
-          <label className={`toggle ${state.art642 ? 'on' : ''}`}>
+          {!bundle.preset && <label className={`toggle ${state.art642 ? 'on' : ''}`}>
             <input type="checkbox" checked={state.art642} onChange={on642} />
             <span className="switch" aria-hidden />
             <span>{t('Extend a weekend expiry (art. 642 CPC)')}</span>
-          </label>
+          </label>}
         </div>
       </section>
 
+      {analysis.notices && <section className="case-review" aria-label={t('Legal review')}>
+        {analysis.notices.map(notice => <p key={notice} className="callout neutral">{notice}</p>)}
+      </section>}
+      {analysis.timeline && <section className="case-timeline" aria-label={t('Procedural timeline')}>
+        <h3>{t('Procedural timeline')}</h3>
+        <ol>{analysis.timeline.map(event => <li key={event.label}><span>{t(event.label)}</span> <time dateTime={event.date}>{fr(event.date)}</time></li>)}</ol>
+      </section>}
       {analysis.chains.map((c) => <Lane key={c.id} chain={c} selected={linkId} onLink={onLink} />)}
 
       {selected ? <LinkDrawer link={selected} analysis={analysis} onAnchor={onAnchor} onClose={() => onLink(null)} />
@@ -109,6 +119,7 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
 
 function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysis: Analysis; onAnchor: (a: Anchor) => void; onClose: () => void }) {
   const { t } = useLocale();
+  const { bundle } = useBundle();
   const regime = link.regime && REGIMES[link.regime];
   return (
     <aside className="drawer" aria-label={t('Link detail')}>
@@ -140,7 +151,7 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
           <tbody><tr><td>{t(regime.name)}</td><td>{t(regime.when)}</td><td>{t(regime.prejudice)}</td><td>{t(regime.curable)}</td><td>{t(regime.ownMotion)}</td><td>{t(regime.interruption)}</td></tr></tbody>
         </table>
       )}
-      {link.kind === 'consequence' && (
+      {!bundle.preset && link.kind === 'consequence' && (
         <div className="deadline">
           <div className="section-label">{t('Limitation calculation')}</div>
           {analysis.limitation && <>
