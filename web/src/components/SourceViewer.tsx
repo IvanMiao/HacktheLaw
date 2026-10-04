@@ -2,11 +2,8 @@ import { useLocale } from '../i18n/useLocale';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { useBundle } from '../data/useBundle';
 import type { Anchor } from '../data/bundle';
-import type { DocGroup } from '../data/documents';
-import { fr } from '../engine/dates';
 import { highlight, locate } from './highlight';
-
-const GROUPS: [DocGroup, string][] = [['case', 'Case file'], ['caselaw', 'Case law'], ['statute', 'Statutes']];
+import { DocumentPicker } from './DocumentPicker';
 
 type Props = { docId: string; onDoc: (id: string) => void; active: Anchor | null; quotesByDoc: Record<string, string[]>; onCollapse: () => void };
 
@@ -26,15 +23,7 @@ export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: 
   return (
     <div className="viewer">
       <div className="viewer-bar">
-        <select value={docId} onChange={(e) => onDoc(e.target.value)} aria-label={t('Document')}>
-          {GROUPS.map(([g, label]) => (
-            <optgroup key={g} label={t(label)}>
-              {docs.filter((d) => d.group === g).map((d) => (
-                <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <DocumentPicker docs={docs} docId={docId} onDoc={onDoc} />
         <button className="icon-btn" onClick={onCollapse} title={t('Collapse source viewer')} aria-label={t('Collapse source viewer')}>⟩</button>
       </div>
       <div className="viewer-meta">

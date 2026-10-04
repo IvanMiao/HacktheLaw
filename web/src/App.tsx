@@ -18,6 +18,7 @@ import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
 import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
+import { CasePicker } from './components/CasePicker';
 
 type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
@@ -95,13 +96,6 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
 
   const analysis = useMemo(() => analyse(bundle, state, t), [bundle, state, t]);
   const cfs = useMemo(() => counterfactuals(bundle, state, t), [bundle, state, t]);
-  const provenance = bundle.provider && bundle.models?.agent
-    ? t('AI · {provider} {model} · {status}', {
-      provider: bundle.provider,
-      model: bundle.models.agent,
-      status: t(bundle.origin === 'cached' ? 'cached' : 'live'),
-    })
-    : t('Hand-checked reference');
   const generatedAt = bundle.generatedAt ? new Date(bundle.generatedAt) : undefined;
   const recordedDate = generatedAt && !Number.isNaN(generatedAt.getTime())
     ? new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(generatedAt)
@@ -214,15 +208,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
         <div className="case-name">
-            <select aria-label={t('Case')} value={selectedCaseId} onChange={(event) => {
-            const selected = event.target.value;
-            onBundle(selected === 'c1-c2' ? SAMPLE : getCase(selected as CaseId));
-          }}>
-            <option value="c1-c2">{t('SAMPLE')} · {t(SAMPLE.profile.title)}</option>
-            {PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.id.toUpperCase()} · {t(preset.profile.title)}</option>)}
-            {!isDemo && <option value={bundle.id}>{t(bundle.profile.title)}</option>}
-          </select>
-          <span className="b-prov qbadge provenance-chip">{provenance}</span>
+          <CasePicker bundle={bundle} onSelect={onBundle} />
         </div>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([currentMode, label], i) => (
