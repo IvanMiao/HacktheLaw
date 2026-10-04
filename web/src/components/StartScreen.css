@@ -115,7 +115,7 @@
 .landing-call { position: absolute; z-index: 2; bottom: 96px; left: 31%; display: flex; flex-direction: column; align-items: center; gap: 2px; opacity: 0; transform: translate(-50%, 6px); transition: opacity .45s, transform .6s; pointer-events: none; white-space: nowrap; }
 .landing-call b { color: var(--landing-risk); font: 600 13px/1.2 var(--mono); }
 .landing-call span { color: var(--landing-quiet); font: 11.5px/1.3 var(--mono); }
-.landing-call.end { left: auto; right: 0; bottom: 35px; transform: translateY(6px); }
+.landing-call.end { left: auto; right: 0; bottom: 64px; align-items: flex-end; transform: translateY(6px); }
 .landing-floor-cascade .landing-call.cause, .landing-floor-settled .landing-call { opacity: 1; transform: translate(-50%, 0); }
 .landing-floor-settled .landing-call.end { transform: none; }
 .landing-floor > span { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; color: var(--landing-quiet); font: 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
