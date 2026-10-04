@@ -72,7 +72,8 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
   const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode || initialReady ? 'ready' : 'start');
-  const currentStage = initialReady ? 'ready' : stage;
+  const [home, setHome] = useState(false);
+  const currentStage = initialReady && !home ? 'ready' : stage;
   const [startError, setStartError] = useState('');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
   const [side, setSide] = useState<PartySide>(() => {
@@ -215,11 +216,11 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       loading={currentStage === 'loading'}
       error={startError}
       onLoad={() => { onClearFallback(); setStartError(''); setStage('loading'); }}
-      onDone={() => { setStage('ready'); onLoaded(); }}
+      onDone={() => { setStage('ready'); setHome(false); onLoaded(); }}
       onError={(message) => { setStartError(message); setStage('start'); }}
       onBundle={onBundle}
       onFallback={onFallback}
-      onReference={() => { setStartError(''); onClearFallback(); onBundle(SAMPLE); }}
+      onReference={() => { setStartError(''); onClearFallback(); setStage('ready'); setHome(false); onBundle(SAMPLE); }}
     />;
   }
 
@@ -234,7 +235,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   return (
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
-        <div className="brand"><Logo /><span>Domino</span></div>
+        <button type="button" className="brand" title={t('Back to upload')} aria-label={t('Back to upload')} onClick={() => { setStartError(''); setStage('start'); setHome(true); }}><Logo /><span>Domino</span></button>
         <div className="case-name">
             <select aria-label={t('Case')} value={selectedCaseId} onChange={(event) => {
             const selected = event.target.value;

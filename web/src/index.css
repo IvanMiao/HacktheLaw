@@ -44,6 +44,7 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1p
 .app { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px auto auto minmax(0, 1fr); }
 .topbar { min-width: 0; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--line); position: relative; z-index: 3; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; letter-spacing: -0.02em; }
+button.brand { background: none; border: 0; padding: 0; color: inherit; font-family: inherit; cursor: pointer; }
 .case-name { min-width: 0; flex: 1 1 auto; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .case-name select { max-width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-overflow: ellipsis; }
 .case-name select:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }

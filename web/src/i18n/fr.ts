@@ -43,6 +43,7 @@ export const french: Record<string, string> = {
 
   'Adopt': 'Retenir',
   'Adopted ✓': 'Retenue ✓',
+  'Back to upload': 'Retour au dépôt',
   'Reset reviews': 'Réinitialiser les revues',
   'Reset all lawyer reviews for this case?': 'Réinitialiser toutes les revues de l’avocat pour ce dossier ?',
   'Edit & adopt': 'Modifier et retenir',

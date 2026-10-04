@@ -40,6 +40,8 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
   const [resultBundle, setResultBundle] = useState<CaseBundle | null>(null);
   const [revealStep, setRevealStep] = useState(-1);
   const [counts, setCounts] = useState([0, 0, 0, 0]);
+  const [live, setLive] = useState({ files: [] as string[], docs: [] as string[], facts: 0 });
+  const liveCounts = useRef([0, 0]);
   const [floorPhase, setFloorPhase] = useState<'idle' | 'scan' | 'cascade' | 'settled'>('idle');
   const [showVerdict, setShowVerdict] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -70,12 +72,14 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
     const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms));
     const reveal = async () => {
       setFloorPhase('scan');
+      const start = [...liveCounts.current, 0, 0];
+      setCounts(start);
       for (let step = 0; step < 4 && !cancelled; step++) {
         setRevealStep(step);
         const target = targets[step];
         const frames = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 20;
         for (let frame = 1; frame <= frames && !cancelled; frame++) {
-          setCounts((previous) => previous.map((value, index) => index === step ? Math.round(target * frame / frames) : value));
+          setCounts((previous) => previous.map((value, index) => index === step ? Math.round(start[step] + (target - start[step]) * frame / frames) : value));
           await wait(32);
         }
         if (step === 2) setFloorPhase('cascade');
@@ -90,6 +94,23 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
     return () => { cancelled = true; };
   }, [resultBundle, targets]);
 
+  const trackLive = (event: AgentEvent) => {
+    const read = event.stage === 'ingest' && event.kind === 'tool' ? /^read (.+)$/.exec(event.text)?.[1] : undefined;
+    const doc = event.stage === 'extract' ? /^read_document (\S+)/.exec(event.text)?.[1] : undefined;
+    const fact = event.stage === 'extract' && /^record_fact\b.*✓$/.test(event.text);
+    if (!read && !doc && !fact) return;
+    setLive((current) => ({
+      files: read && !current.files.includes(read) ? [...current.files, read] : current.files,
+      docs: doc && !current.docs.includes(doc) ? [...current.docs, doc] : current.docs,
+      facts: current.facts + (fact ? 1 : 0),
+    }));
+  };
+
+  const liveValues = [live.files.length || live.docs.length, live.facts];
+  useEffect(() => {
+    liveCounts.current = [live.files.length || live.docs.length, live.facts];
+  }, [live]);
+
   const addFiles = (incoming: FileList | null) => {
     if (incoming?.length) setFiles((current) => [...current, ...Array.from(incoming)]);
   };
@@ -101,6 +122,8 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
     setResultBundle(null);
     setRevealStep(-1);
     setCounts([0, 0, 0, 0]);
+    setLive({ files: [], docs: [], facts: 0 });
+    liveCounts.current = [0, 0];
     setFloorPhase('idle');
     setShowVerdict(false);
     onLoad();
@@ -130,7 +153,10 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
       const consume = (line: string) => {
         if (!line.trim()) return;
         const item = JSON.parse(line) as StreamLine;
-        if (item.type === 'event') setEvents((previous) => [...previous, item.event].slice(-100));
+        if (item.type === 'event') {
+          setEvents((previous) => [...previous, item.event].slice(-100));
+          trackLive(item.event);
+        }
         else if (item.type === 'error') throw new Error(item.message);
         else receivedBundle = item.bundle;
       };
@@ -226,7 +252,7 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
               ].map(([label, detail], index) => {
                 const liveStep = events.some((event) => (index === 0 && event.stage === 'ingest') || (index === 1 && event.stage === 'extract') || (index === 2 && (event.stage === 'qualify' || event.stage === 'engine')) || (index === 3 && event.stage === 'engine'));
                 const done = resultBundle ? revealStep > index || showVerdict : index < 3 && events.some((event) => (index === 0 && event.stage !== 'ingest') || (index === 1 && (event.stage === 'qualify' || event.stage === 'engine')) || (index === 2 && event.stage === 'engine'));
-                return <div className={`landing-step${done ? ' done' : revealStep === index || (!resultBundle && liveStep) ? ' on' : ''}`} key={label}><span className="landing-step-status" /><span className="landing-step-text">{label}<small>{detail}</small></span><span className="landing-step-count">{counts[index]}</span></div>;
+                return <div className={`landing-step${done ? ' done' : revealStep === index || (!resultBundle && liveStep) ? ' on' : ''}`} key={label}><span className="landing-step-status" /><span className="landing-step-text">{label}<small>{detail}</small></span><span className="landing-step-count">{resultBundle ? counts[index] : index < 2 ? liveValues[index] : '…'}</span></div>;
               })}
             </div>
             {!resultBundle && <p className="landing-current-event">{events.at(-1)?.text ?? t('Preparing pipeline…')}</p>}
