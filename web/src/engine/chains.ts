@@ -5,7 +5,7 @@ import { addDays, daysBetween, fr } from './dates.js';
 import { computeLimitation, type LimitationEvent, type LimitationResult } from './limitation.js';
 import type { RegimeKey } from './regimes.js';
 
-export type Decision = 'proposed' | 'confirmed' | 'rejected' | 'pending';
+export type Decision = 'proposed' | 'confirmed' | 'rejected' | 'pending' | 'disagreed';
 export type ReviewEntry = { note: string; nextStep: string };
 
 export type AnalysisState = {
@@ -139,9 +139,11 @@ export function value(bundle: CaseBundle, state: AnalysisState, qid: string): bo
   return state.decisions[qid] === 'rejected' ? !q.proposed : q.proposed;
 }
 
+export const needsReview = (decision: Decision) => decision === 'pending' || decision === 'disagreed';
+
 export function isContested(bundle: CaseBundle, state: AnalysisState, qid: string): boolean {
   const q = qualOf(bundle, qid);
-  return !(qid in state.whatIf) && (state.decisions[qid] === 'pending' || (q.source === 'ai_inferred' && state.decisions[qid] === 'proposed'));
+  return !(qid in state.whatIf) && (needsReview(state.decisions[qid]) || (q.source === 'ai_inferred' && state.decisions[qid] === 'proposed'));
 }
 
 export function adoptInterpretation(bundle: CaseBundle, state: AnalysisState, qid: string, interpretation: boolean, review?: ReviewEntry): AnalysisState {
@@ -151,6 +153,15 @@ export function adoptInterpretation(bundle: CaseBundle, state: AnalysisState, qi
     decisions: { ...state.decisions, [qid]: 'confirmed' },
     interpretations: { ...state.interpretations, [qid]: interpretation },
     reviews: review ? { ...state.reviews, [qid]: review } : state.reviews,
+  };
+}
+
+export function disagreeInterpretation(bundle: CaseBundle, state: AnalysisState, qid: string, review: ReviewEntry): AnalysisState {
+  if (Object.keys(state.whatIf).length || !review.note.trim() || !bundle.qualifications.some((q) => q.id === qid)) return state;
+  return {
+    ...state,
+    decisions: { ...state.decisions, [qid]: 'disagreed' },
+    reviews: { ...state.reviews, [qid]: { note: review.note.trim(), nextStep: review.nextStep.trim() } },
   };
 }
 
@@ -200,7 +211,7 @@ function settle(defs: LinkDef[], ctx: Ctx): Link[] {
   let broken = false;
   return defs.map(({ holds, brokenReason, ...link }) => {
     if (broken) return { ...link, status: 'not_reached' };
-    if (link.deps.some((qid) => ctx.state.decisions[qid] === 'pending' && !(qid in ctx.state.whatIf))) {
+    if (link.deps.some((qid) => needsReview(ctx.state.decisions[qid]) && !(qid in ctx.state.whatIf))) {
       broken = true;
       return { ...link, status: 'pending' };
     }

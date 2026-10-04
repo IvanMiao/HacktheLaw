@@ -1,5 +1,5 @@
 import { factOf, type CaseBundle } from '../data/bundle.js';
-import { value, isContested, type Analysis, type AnalysisState, type ChainResult, type Link, type NodeKind } from './chains.js';
+import { value, isContested, needsReview, type Analysis, type AnalysisState, type ChainResult, type Link, type NodeKind } from './chains.js';
 import { daysBetween } from './dates.js';
 import { proceduralDeadline } from './proceduralDates.js';
 import type { Translator } from '../i18n/translate.js';
@@ -13,7 +13,7 @@ export function analyseAdditional(bundle: CaseBundle, state: AnalysisState, t: T
   const chain = (id:string, title:string, subtitle:string, outcome:string, definitions:Definition[]): ChainResult => {
     let broken = false;
     const links:Link[] = definitions.map(d => {
-      const pending = (d.deps ?? []).some(qid => state.decisions[qid] === 'pending' && !(qid in state.whatIf));
+      const pending = (d.deps ?? []).some(qid => needsReview(state.decisions[qid]) && !(qid in state.whatIf));
       const status = broken ? 'not_reached' : pending ? 'pending' : d.holds === false ? 'broken' : (d.deps ?? []).some(contested) ? 'contested' : 'established';
       if (status === 'broken' || status === 'pending') broken = true;
       return {id:d.id, kind:d.kind, title:t(d.title), statement:t(d.statement), rule:d.rule, regime:d.regime,

@@ -23,7 +23,7 @@ export function restoreReviews(bundle: CaseBundle, saved: string | null): Analys
     if (data?.version !== 1 || data.revision !== revision(bundle)) return state;
     for (const { id } of bundle.qualifications) {
       const decision = data.decisions?.[id] as Decision;
-      if (['proposed', 'confirmed', 'rejected', 'pending'].includes(decision)) state.decisions[id] = decision;
+      if (['proposed', 'confirmed', 'rejected', 'pending', 'disagreed'].includes(decision)) state.decisions[id] = decision;
       if (typeof data.interpretations?.[id] === 'boolean') state.interpretations[id] = data.interpretations[id];
       const review = data.reviews?.[id];
       if (typeof review?.note === 'string' && typeof review?.nextStep === 'string') {
