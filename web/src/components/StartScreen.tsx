@@ -6,6 +6,7 @@ import { english } from '../i18n/translate';
 import aiBundleJson from '../../../data/sample-case/ai-bundle.json';
 import { LanguageSwitch } from './LanguageSwitch';
 import { FilmIntro } from './FilmIntro';
+import { ConnectionsButton } from './Connections';
 import './StartScreen.css';
 
 const aiBundle = aiBundleJson as unknown as CaseBundle;
@@ -19,6 +20,7 @@ type Props = {
   onReference: () => void;
   error?: string;
   onBundle?: (bundle: CaseBundle) => void;
+  onConnections?: () => void;
 };
 
 async function encodeFile(file: File) {
@@ -30,7 +32,7 @@ async function encodeFile(file: File) {
   return { name: file.name, mime: file.type || 'application/octet-stream', base64: btoa(binary) };
 }
 
-export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onReference, error, onBundle }: Props) {
+export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onReference, error, onBundle, onConnections }: Props) {
   const { t } = useLocale();
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -187,7 +189,10 @@ export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onRe
       {!loading && <FilmIntro />}
       <header className="landing-top">
         <div className="landing-eyebrow"><i aria-hidden="true" />{t('French civil procedure')}</div>
-        <LanguageSwitch />
+        <div className="landing-actions">
+          {onConnections && <ConnectionsButton onClick={onConnections} />}
+          <LanguageSwitch />
+        </div>
       </header>
       <div className="landing-center"><div className="landing-col">
         <div className="landing-brand">

@@ -5,6 +5,13 @@ import { useLocale } from '../i18n/useLocale';
 import { copyText, dialogKey } from '../integrations/interaction';
 type Status={source:{configured:boolean};profiles:{id:string;label:string;model:string;configured:boolean;protocol:string}[];cases:{id:string;title:string|{en:string;fr:string};analysed:boolean}[]};
 const API='/api/connections';
+export function ConnectionsButton({ onClick }: { onClick: () => void }) {
+  const { locale } = useLocale();
+  const text = locale === 'fr' ? 'Connexions' : 'Connections';
+  return <button type="button" className="connections-toggle" onClick={onClick} title={text} aria-haspopup="dialog">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5v3M10 2.5v3M4.5 5.5h7v2.5a3.5 3.5 0 0 1-7 0V5.5ZM8 11.5v2" /></svg><span>{text}</span>
+  </button>;
+}
 export function Connections({onClose,onView}:{onClose:()=>void;onView:(bundle:CaseBundle)=>void}){
   const panel = useRef<HTMLElement>(null);
   useEffect(() => { const before = document.activeElement as HTMLElement | null; panel.current?.querySelector<HTMLButtonElement>('button')?.focus(); return () => before?.focus(); }, []);
@@ -20,9 +27,10 @@ export function Connections({onClose,onView}:{onClose:()=>void;onView:(bundle:Ca
   const run=(mode:'deterministic'|'ai-review')=>act(async()=>{if(!bundle)return;const next=await request(`/cases/${bundle.id}/analyse`,{mode,...(mode==='ai-review'?{profileId}:{})});setResult(next);await refresh();setNotice(label('Analysis ready. Lawyer review required.','Analyse disponible. Validation par un avocat requise.'));});
   const exported=async()=>{if(!bundle)throw Error();return request(`/cases/${bundle.id}/export`);};
   return <div className="connections-backdrop"><section ref={panel} onKeyDown={event => dialogKey(event, onClose, busy)} className="connections-panel" role="dialog" aria-modal="true" aria-labelledby="connections-title">
-    <header className="connections-header"><div><span className="connections-kicker">DOMINO / {label('LOCAL WORKSPACE','ESPACE LOCAL')}</span><h1 id="connections-title">{label('Connections','Connexions')}</h1></div><button className="btn" disabled={busy} onClick={onClose}>{label('Close','Fermer')}</button></header>
+    <header className="connections-header"><div><span className="connections-kicker">DOMINO / {label('LOCAL WORKSPACE','ESPACE LOCAL')}</span><h1 id="connections-title">{label('Connections','Connexions')}</h1></div><div className="connections-header-side"><span className={`connections-state${status?' on':failed?' off':''}`}><i aria-hidden="true" />{status?label('Local bridge online','Passerelle locale active'):failed?label('Offline','Hors ligne'):label('Checking…','Vérification…')}</span><button type="button" className="connections-close" disabled={busy} onClick={onClose} aria-label={label('Close','Fermer')} title={label('Close','Fermer')}>×</button></div></header>
     <p className="connections-lead">{label('Your evidence. Your AI API. A traceable result returned to your system.','Vos sources. Votre API IA. Un résultat traçable renvoyé à votre système.')}</p>
     <p className="callout amber">{label('Local single-tenant demo · synthetic data only · no automatic write-back · legal review required.','Démo locale mono-cabinet · données synthétiques uniquement · aucun renvoi automatique · validation juridique requise.')}</p>
+    {failed&&!status&&<div className="connections-offline"><strong>{label('Local integration demo not running','Démo d’intégration locale non démarrée')}</strong><p>{label('Start it from web/ to connect a firm source and an AI profile:','Lancez-la depuis web/ pour connecter une source du cabinet et un profil IA :')}</p><code>npm run dev:integrations</code></div>}
     <div className="connections-grid">
       <section className="connection-card"><span className="connections-kicker">01 / {label('EVIDENCE','SOURCES')}</span><h2>{label('Synthetic SQLite demo bridge','Passerelle SQLite synthétique')}</h2>
         <p>{label('Read-only, server-configured matter selector. Other databases connect through the normalized push API.','Lecture seule et sélection de dossiers configurée côté serveur. Les autres bases utilisent l’API d’import normalisée.')}</p>
@@ -43,7 +51,7 @@ export function Connections({onClose,onView}:{onClose:()=>void;onView:(bundle:Ca
       {result&&<><p className="connection-footnote">{label('Export contains the server baseline with proposed decisions; browser-only confirmations and what-if previews are not transmitted.','L’export contient la référence serveur avec décisions proposées ; les confirmations et hypothèses du navigateur ne sont pas transmises.')}</p><ul className="connection-chains">{result.analysis.chains.map(chain=><li key={chain.id}><strong>{chain.id} · {chain.title}</strong><span>{t(chain.status)}</span></li>)}</ul><details><summary>{label('Deterministic memo preview','Aperçu de la note déterministe')}</summary><p className="connection-memo">{result.memoMarkdown}</p></details></>}
       {result?.aiReview&&<section><h3>{label('AI commentary — not legal confirmation','Commentaire IA — sans confirmation juridique')}</h3><p>{result.aiReview.profileId} · {result.aiReview.model}</p><ul>{result.aiReview.notes.map((note,i)=><li key={i}>{note.text}<small> · {note.documentIds.join(', ')}</small></li>)}</ul></section>}
     </section>
-    <p role={failed?'alert':'status'} className={`connection-notice ${failed?'error':''}`}>{busy?label('Working…','Traitement…'):notice}</p>
+    <p role={failed?'alert':'status'} className={`connection-notice ${failed?'error':''}`}>{busy?label('Working…','Traitement…'):status?notice:''}</p>
     <details className="connection-card"><summary>{label('Developer API','API développeur')}</summary><p>{label('Firm connectors submit normalized document text; bearer authentication is mandatory. Export returns JSON, never sends it to an arbitrary URL.','Les connecteurs transmettent le texte normalisé ; l’authentification Bearer est obligatoire. L’export renvoie du JSON, jamais vers une URL arbitraire.')}</p><code className="connection-code">{'curl http://127.0.0.1:5175/api/v1/connections -H "Authorization: Bearer $DOMINO_INTEGRATION_KEY"'}</code><p><a href="/api/connections/openapi" target="_blank" rel="noreferrer">OpenAPI 3.1</a> · <span>POST /api/v1/cases → POST /api/v1/cases/:id/analyse → GET /api/v1/cases/:id/export</span></p></details>
   </section></div>;
 }

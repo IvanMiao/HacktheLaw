@@ -19,14 +19,13 @@ import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
 import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
-import { Connections } from './components/Connections';
+import { Connections, ConnectionsButton } from './components/Connections';
 import { isFirmImport } from './integrations/provenance';
 
 type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
-  const { locale } = useLocale();
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [caseId, setCaseId] = useState<CaseId>(() => {
     const requested = new URLSearchParams(location.search).get('case');
@@ -48,7 +47,7 @@ export default function App() {
     setCaseId(nextCaseId);
     setBundle(next);
   };
-  return <BundleProvider bundle={bundle}><button className="btn connections-toggle" onClick={() => setConnectionsOpen(true)}>{locale === 'fr' ? 'Connexions' : 'Connections'}</button>
+  return <BundleProvider bundle={bundle}>
     {connectionsOpen && <Connections onClose={() => setConnectionsOpen(false)} onView={(next) => { switchBundle(next); setHasLoaded(true); setConnectionsOpen(false); }} />}
     <AppContent
     key={bundle.id}
@@ -59,10 +58,11 @@ export default function App() {
     onFallback={setFallbackMessage}
     onClearFallback={() => setFallbackMessage('')}
     activeCase={activeCase}
+    onConnections={() => setConnectionsOpen(true)}
   /></BundleProvider>;
 }
 
-function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback, activeCase }: {
+function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback, activeCase, onConnections }: {
   onBundle: (bundle: CaseBundle) => void;
   initialReady: boolean;
   onLoaded: () => void;
@@ -70,6 +70,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   onFallback: (message: string) => void;
   onClearFallback: () => void;
   activeCase: CaseSession;
+  onConnections: () => void;
 }) {
   const { bundle, docs, factOf } = useBundle();
   const caseToken = activeCase.identity();
@@ -218,6 +219,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       onError={(message) => { setStartError(message); setStage('start'); }}
       onBundle={onBundle}
       onFallback={onFallback}
+      onConnections={onConnections}
       onReference={() => { setStartError(''); onClearFallback(); setStage('ready'); setHome(false); onBundle(SAMPLE); }}
     />;
   }
@@ -251,6 +253,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           ))}
         </nav>
         {trace.length > 0 && <button className="btn trace-toggle" aria-expanded={traceOpen} onClick={() => setTraceOpen((open) => !open)}>{t('Trace')}</button>}
+        <ConnectionsButton onClick={onConnections} />
         <LanguageSwitch />
         <details className="case-context">
           <summary aria-label={t('Case details')} title={t('Case details')}>ⓘ</summary>
