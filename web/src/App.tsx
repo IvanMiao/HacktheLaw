@@ -21,6 +21,7 @@ import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
 import { Connections, ConnectionsButton } from './components/Connections';
 import { isFirmImport } from './integrations/provenance';
+import { CasePicker } from './components/CasePicker';
 
 type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
@@ -236,14 +237,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       <header className="topbar">
         <button type="button" className="brand" title={t('Back to upload')} aria-label={t('Back to upload')} onClick={() => { setStartError(''); setStage('start'); setHome(true); }}><Logo /><span>Domino</span></button>
         <div className="case-name">
-            <select aria-label={t('Case')} value={selectedCaseId} onChange={(event) => {
-            const selected = event.target.value;
-            onBundle(selected === 'c1-c2' ? SAMPLE : getCase(selected as CaseId));
-          }}>
-            <option value="c1-c2">{t('SAMPLE')} · {t(SAMPLE.profile.title)}</option>
-            {PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.id.toUpperCase()} · {t(preset.profile.title)}</option>)}
-            {!isDemo && <option value={bundle.id}>{t(bundle.profile.title)}</option>}
-          </select>
+          <CasePicker bundle={bundle} onSelect={onBundle} />
           <span className="b-prov qbadge provenance-chip">{provenance}</span>
         </div>
         <nav className="modes" aria-label={t('Mode')}>

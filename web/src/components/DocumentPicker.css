@@ -1,0 +1,10 @@
+.document-picker { flex: 1; width: auto; max-width: none; }
+.document-picker .case-picker-trigger { height: 32px; background: var(--card); }
+.document-picker .case-picker-code { max-width: 88px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.document-picker-menu { left: auto; right: 0; width: min(400px, 100%); max-height: min(420px, 48vh); }
+.document-picker-group + .document-picker-group { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); }
+.document-picker-heading { padding: 7px 10px 5px; color: var(--muted); font: 600 10px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.document-picker-option { gap: 8px; }
+.document-picker-item-title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.document-picker-date { flex: none; color: var(--muted); font: 10.5px var(--mono); }
+@media (max-width: 640px) { .document-picker-date { display: none; } }
