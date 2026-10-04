@@ -12,6 +12,8 @@ it('renders compact, accessible voice controls, editable fallback and explicit p
  expect(html).toContain('aria-checked="false"');
  expect(html).toContain('Continuous listening');
  expect(html).toContain('Partial transcript');
+ expect(html).toContain('data-testid="voice-diagnostics"');
+ expect(html).toContain('Pipeline diagnostics');
  expect(html).toContain('automatically');
  expect(html).not.toContain('Start recording');
  expect(html).not.toContain('Stop recording');

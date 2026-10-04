@@ -22,7 +22,8 @@ The original bounded recording delivery below is historical evidence, not accept
 - [x] Silence/pending permission/denial/initialization/reconnect/order/grounding/decision invariants have regression coverage; 65 tests in 10 files, preserving original 41 tests.
 - [x] Reproducible runtime/startup, ignored env loading, local URLs and human ON/OFF checklist are in web/README.md. Human microphone acceptance is still separate, never claimed.
 - [x] Real evidence: web/.verification/realtime-browser-final-evidence.json (final UI/provider), realtime-browser-evidence.json (OFF race), realtime-provider-evidence.json (protocol/engine).
-- [ ] Parent independently verifies local feature commit and combines the separately owned C3–C5 lane. Realtime layer uses abstract /api/intent; current legal ID/context allowlists remain C1/C2 until that integration.
+- [x] Integrated noisy-input boundary reproduced against real provider: stable partial but zero intent requests under continuous RMS above the old fixed threshold. Ambient calibration, conservative contrast endpointing, bounded discard/error and safe pipeline metrics repaired this; EN preview and FR reset pass in one noisy ON session. See `docs/REALTIME_ENDPOINT_DIAGNOSIS.md`; integrated gates now100tests. Human microphone remains separately pending.
+- [ ] Parent independently verifies the latest endpoint repair. C3–C5 and bilingual main are already integrated; per-case ID/context allowlists and citation schemas remain strict.
 
 > **For Hermes:** Implement task-by-task with test-driven-development and subagent-driven-development; require specification review and code-quality review before acceptance.
 
