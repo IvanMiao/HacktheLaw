@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { analyse, initialState } from '../src/engine/chains.js';
 import { english } from '../src/i18n/translate.js';
 import type { AgentEvent, CaseBundle } from '../src/data/bundle.js';
-import type { InputFile } from './ingest.js';
+import type { InputFile, IngestedDoc } from './ingest.js';
+import type { Doc } from '../src/data/documents.js';
 import { ingest } from './ingest.js';
 import { loadLibrary } from './library.js';
 import { buildIndex } from './retrieval.js';
@@ -14,8 +15,6 @@ import { configuredProvider, providerConfig, type ModelSet, type Provider } from
 import { extractCase } from './agents/extract.js';
 import { qualifyFacts } from './agents/qualify.js';
 
-const CACHE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../.cache/bundles');
-
 export type CaseInput = { sample: true } | { files: InputFile[] };
 export type RunOptions = {
   provider?: Provider;
@@ -23,6 +22,10 @@ export type RunOptions = {
   asOf?: string;
   signal?: AbortSignal;
   fresh?: boolean;
+  library?: Doc[];
+  sampleDocs?: IngestedDoc[];
+  cacheDir?: string;
+  cache?: boolean;
 };
 
 function mergeUsage(target: Usage, next: Usage) {
@@ -41,9 +44,11 @@ function hash(value: string) {
 export async function runCase(input: CaseInput, emit: (event: AgentEvent) => void, options: RunOptions = {}): Promise<CaseBundle> {
   const provider = options.provider ?? configuredProvider();
   const config = providerConfig(provider, options.models);
-  const cacheKey = hash(JSON.stringify({ input, provider, models: config.models }));
-  const cachePath = resolve(CACHE_DIR, `${cacheKey}.json`);
-  if (!options.fresh) {
+  const asOf = options.asOf ?? new Date().toISOString().slice(0, 10);
+  const cacheDir = options.cacheDir ?? resolve(dirname(fileURLToPath(import.meta.url)), '../.cache/bundles');
+  const cacheKey = hash(JSON.stringify({ input, provider, models: config.models, asOf, reasoning: config.reasoning }));
+  const cachePath = resolve(cacheDir, `${cacheKey}.json`);
+  if (!options.fresh && options.cache !== false) {
     try {
       const cached = JSON.parse(await readFile(cachePath, 'utf8')) as CaseBundle;
       cached.origin = 'cached';
@@ -62,7 +67,6 @@ export async function runCase(input: CaseInput, emit: (event: AgentEvent) => voi
     emit(event);
   };
   const client = createLlmClient(provider);
-  const asOf = options.asOf ?? new Date().toISOString().slice(0, 10);
   const throwIfAborted = () => {
     if (options.signal?.aborted) throw options.signal.reason ?? new Error('Run aborted');
   };
@@ -73,10 +77,14 @@ export async function runCase(input: CaseInput, emit: (event: AgentEvent) => voi
     ocrModel: config.models.ocr,
     emit: push,
     signal: options.signal,
+    sampleDocs: options.sampleDocs,
   });
   throwIfAborted();
-  const library = await loadLibrary();
-  const index = await buildIndex([...docsResult.docs, ...library], client, { emit: push, signal: options.signal });
+  const library = options.library ?? await loadLibrary();
+  const index = await buildIndex([...docsResult.docs, ...library], client, {
+    emit: push, signal: options.signal,
+    ...(options.cacheDir ? { cacheDir: resolve(options.cacheDir, 'emb') } : {}),
+  });
   throwIfAborted();
   const extracted = await extractCase(docsResult.docs, index, {
     client,
@@ -119,8 +127,14 @@ export async function runCase(input: CaseInput, emit: (event: AgentEvent) => voi
   const summary = analysis.chains.map((chain) => `${chain.id} ${chain.status}`).join(' · ');
   push({ at: Date.now(), stage: 'engine', kind: 'note', text: summary || 'No consequence chains were derived' });
   bundle.trace = trace;
-  await mkdir(CACHE_DIR, { recursive: true });
-  await writeFile(cachePath, JSON.stringify(bundle, null, 2), 'utf8');
+  if (options.cache !== false) {
+    try {
+      await mkdir(cacheDir, { recursive: true });
+      await writeFile(cachePath, JSON.stringify(bundle, null, 2), 'utf8');
+    } catch {
+      push({ at: Date.now(), stage: 'engine', kind: 'warn', text: 'Bundle cache unavailable; returning uncached analysis' });
+    }
+  }
   return bundle;
 }
 
