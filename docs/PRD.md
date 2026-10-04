@@ -1,87 +1,95 @@
-# ClaimClock — Product Requirements Document
+# Domino — Product Requirements Document
 
-> Mistral x Law hackathon (one day). Status: draft v0.2 (civil litigation).
+> Mistral x Law hackathon (one day). Status: draft v0.3 (civil procedure, consequence chains).
 > Legal references below must be checked by a lawyer on the team before the demo.
 
 ## 1. Summary
 
-ClaimClock is a web app for French civil and commercial litigators. From a client's file (contract, invoices, emails, letters, mediation records) it answers one question before anyone files: **is this claim still alive, and can this defendant still be sued?**
+Domino is a web app for French civil and commercial litigators. From a case file (contract, invoices, correspondence, writs, court records) it reconstructs **procedural consequence chains** — *a defect → its procedural sanction → the effect that is lost → the substantive consequence → the available defence* — and shows, source by source, whether a claim can be knocked out without ever reaching the merits.
 
-It extracts dated events with source anchors, lets the AI **qualify** each event's legal effect on the limitation period (interruption, suspension, or no effect), computes the deadline with deterministic rules, checks the defendant's status (collective insolvency proceedings), and drafts a source-backed pre-filing memo.
+Flagship chain:
 
-**Principle:** AI finds and qualifies the facts. Rules compute the deadline. Lawyers decide.
+> Writ of summons (*assignation*) not filed with the court registry (*placement au greffe*) in time → **caducité** (lapse) → the writ's interruptive effect on the limitation period is lost → the limitation period kept running → **fin de non-recevoir** (art. 122 CPC) → **claim inadmissible**.
+
+The AI extracts and qualifies facts from French documents; a deterministic engine evaluates the chains and computes deadlines; the lawyer confirms each contested link and decides.
+
+**Principle:** AI finds and qualifies the facts. Rules run the chain. Lawyers decide.
+
+**Pitch:** Find the domino that knocks out the claim.
 
 ## 2. Problem
 
-- Missing a deadline is one of the most common sources of professional liability claims against lawyers. A time-barred claim ends in a *fin de non-recevoir* (art. 122 CPC): the case is dismissed without examining the merits.
-- The limitation date is rarely just "due date + 5 years". It depends on scattered events buried in correspondence:
-  - **Interruption** restarts a full new period: acknowledgment of the debt (art. 2240 C. civ.), court action (art. 2241), enforcement measures (art. 2244).
-  - **Suspension** pauses the clock without erasing elapsed time (art. 2230): mediation or conciliation (art. 2238), a pre-trial expert measure (art. 2239).
-  - **No effect**, despite a common belief: an ordinary formal notice (*mise en demeure*) does **not** interrupt the period, except under special regimes (e.g. art. L114-2 C. assur.).
-- Whether an email counts as an acknowledgment is a **legal qualification of ambiguous French text**. That is exactly where lawyers spend time and where AI helps.
-- The defendant may meanwhile have entered insolvency proceedings. Suing for payment is then barred (art. L622-21 C. com.), and the claim must be declared to the *mandataire judiciaire* within 2 months of the BODACC publication (art. R622-24 C. com.).
-- Generic LLMs produce confident dates without showing their reasoning. Lawyers cannot rely on output they cannot verify.
+- In French civil procedure, admissibility comes before the merits. A single procedural slip can end a case: *fin de non-recevoir* (arts. 122–126 CPC), *nullité* (arts. 112–121), *caducité*, *exception d'incompétence* (arts. 73–75).
+- The decisive issues are **chains**, not isolated checks. A late filing of a writ does nothing by itself; it matters because the writ lapses, the lapse wipes out the interruption of the limitation period, and by the time the claimant re-files, the period has expired.
+- Each sanction has its own regime, and the regimes are easy to confuse:
+  - when it must be raised;
+  - whether prejudice (*grief*) must be shown;
+  - whether it can be cured;
+  - whether the judge raises it of their own motion;
+  - what happens to the interruption of the limitation period.
+
+  Example: a writ **annulled for a procedural defect keeps its interruptive effect** (art. 2241 al. 2 C. civ.); a writ that **lapses does not** (art. 2243 C. civ. and settled case law).
+- The facts that trigger these chains are scattered across dozens of documents: dates in writs, registry stamps, contract clauses, emails.
+- Generic LLMs produce fluent conclusions without showing which fact and which rule they rest on. Lawyers cannot rely on them.
 
 ## 3. Goals and non-goals
 
 **Goals (hackathon)**
 
-1. Every extracted event is linked to a page and verbatim passage, or visibly marked *Unverified*.
-2. The AI qualifies each event's effect on the limitation period. Ambiguous qualifications are labelled *AI-inferred* and require lawyer confirmation.
-3. A deterministic engine computes the limitation date and recomputes it live when the lawyer confirms or rejects a qualification.
-4. Sensitivity analysis: show which conclusion depends on which contested event.
-5. Check the defendant's status and surface the insolvency deadlines.
-6. Generate an editable, source-cited pre-filing memo.
-7. A polished, calm, trustworthy UI that a lawyer understands in 10 seconds.
+1. Every extracted fact is linked to a page and verbatim passage, or visibly marked *Unverified*.
+2. The AI qualifies facts (e.g. *Is this a nullity or a lapse? Is this email an acknowledgment of debt? Does this contract contain a mandatory prior-conciliation clause?*). Ambiguous qualifications are labelled *AI-inferred* and require lawyer confirmation.
+3. A deterministic engine evaluates a small library of consequence chains, including deadline computation.
+4. Counterfactual analysis: show which link each conclusion hinges on, and what happens if it is overturned.
+5. Generate an editable, source-cited defence memo ordering the arguments correctly.
+6. A polished, calm, trustworthy UI that a lawyer understands in 10 seconds.
 
 **Non-goals**
 
-- Ruling on the merits, or guaranteeing the outcome; giving legal advice.
-- Covering every special limitation regime; jurisdiction routing; drafting the *assignation* (writ of summons).
+- Ruling on the merits; guaranteeing outcomes; giving legal advice.
+- Exhaustive coverage of the CPC; every special limitation regime; drafting full *conclusions* (written submissions).
 - Real client data, authentication, multi-user, desktop packaging.
 
 ## 4. Users
 
 | Persona | Need |
 |---|---|
-| **Claimant's lawyer** | Before filing: is the claim time-barred? Against whom, and by when, must I act? |
-| **Defendant's lawyer** | Find the *fin de non-recevoir*: is the opposing claim already time-barred? |
-| **In-house counsel / collections team** | Triage a portfolio of unpaid invoices by legal urgency. |
+| **Defendant's lawyer** (primary) | Find every admissibility defence in the opposing claim, ranked by strength, with sources. |
+| **Claimant's lawyer** | Pre-filing and in-flight risk audit: *"Place this writ by DATE or it lapses — and your claim will be time-barred."* |
+| **In-house counsel / professional-liability insurer** | Spot procedural risk across a portfolio of cases. |
 | **Hackathon jury** (lawyers + Mistral) | See legal soundness, verifiability, and a clear role for the model in under 2 minutes. |
 
 ## 5. User stories
 
-1. As a lawyer, I upload a client file and see a timeline of dated events with their sources.
-2. As a lawyer, I see each event's proposed legal effect (*starts / interrupts / suspends / no effect / bars action*) with the rule and the reasoning.
-3. As a lawyer, I click any event and the source document scrolls to the highlighted passage.
-4. As a lawyer, I confirm or reject an AI-inferred qualification, and the deadline recomputes instantly.
-5. As a lawyer, I see the claim's status as of a chosen date: **Alive (N days left)** or **Time-barred since DATE**.
-6. As a lawyer, I see which events the conclusion hinges on ("without event X, the claim is time-barred").
-7. As a lawyer, I see whether the defendant is in insolvency proceedings and what that changes.
-8. As a lawyer, I generate a pre-filing memo, edit it, and export it.
+1. As a lawyer, I upload a case file and see a timeline of dated facts with their sources.
+2. As a lawyer, I see each fact's proposed legal qualification, with the rule and the reasoning.
+3. As a lawyer, I click any fact and the source document scrolls to the highlighted passage.
+4. As a lawyer, I see every consequence chain that applies, from triggering fact to outcome, with the status of each link.
+5. As a lawyer, I confirm or reject an AI-inferred qualification and the chains update instantly.
+6. As a lawyer, I see which link each chain hinges on and what happens if the opposing party overturns it.
+7. As a lawyer, I see the procedural regime of each defence: when to raise it, whether prejudice must be shown, whether it can be cured.
+8. As a lawyer, I generate a defence memo with arguments in the correct order, edit it, and export it.
 
 ## 6. Scope
 
 **Must (demo-critical)**
 
-- Load the bundled synthetic client file in one click; optionally upload PDFs/emails.
-- Text extraction (OCR when needed) and structured event extraction with page + quote anchors.
+- Load the bundled synthetic case file in one click; optionally upload PDFs/emails.
+- Text extraction (OCR when needed) and structured fact extraction with page + quote anchors.
 - Quote verification against the source text; unmatched quotes → *Unverified*.
-- AI qualification of each event, with reasoning and confidence.
-- Limitation engine, rules R1–R5 (§7.4), with live recomputation.
-- Timeline + deadline track, event detail, source viewer with highlight.
-- Sensitivity panel.
-- Defendant status card (insolvency) — a live API call, or a mocked response for the demo.
-- Pre-filing memo with citation chips; copy / Markdown export.
+- AI qualification of facts, with reasoning and confidence.
+- Chain engine with chains **C1** (lapse → limitation) and **C2** (prior-conciliation clause), and the limitation sub-engine (§7.5).
+- Chain view, fact detail, source viewer with highlight.
+- Counterfactual toggles with live re-evaluation.
+- Defence memo with citation chips; copy / Markdown export.
 - Precomputed cache so the demo runs offline if the model API fails.
 
 **Should**
 
-- Rule R6 (mandatory prior amicable resolution attempt). Defendant mode ("find the *fin de non-recevoir*"). DOCX export. FR/EN UI toggle.
+- Chain **C3** (defendant in insolvency proceedings), with a second sample file. Claimant mode (preventive deadlines). DOCX export. FR/EN UI toggle.
 
 **Could**
 
-- Portfolio view of several claims ranked by days left. Rule R7 (20-year long-stop). Side-by-side comparison: "plain LLM answer vs ClaimClock".
+- Chains **C4** (order of procedural objections) and **C5** (appeal lapse). Portfolio view. Side-by-side comparison: "plain LLM answer vs Domino".
 
 ## 7. Functional requirements
 
@@ -89,89 +97,114 @@ It extracts dated events with source anchors, lets the AI **qualify** each event
 
 - Inputs: PDF (scanned or born-digital), `.eml`/text emails; up to ~30 documents for the demo.
 - Use the text layer when it exists; otherwise OCR. Keep per-page text and, if available, line/word coordinates.
-- Show staged progress: *Reading documents → Extracting events → Qualifying effects → Computing deadlines*.
+- Show staged progress: *Reading documents → Extracting facts → Qualifying → Running chains*.
 
 ### 7.2 Extraction
 
-The model returns JSON validated against a schema (§8). For each **Event**:
-- date;
-- author / recipient;
-- document type (invoice, contract, email, LRAR registered letter, mediation agreement, mediation report, court act, registry record);
-- short neutral summary;
-- one or more **anchors** `{doc, page, quote}`.
+The model returns JSON validated against a schema (§8).
 
-Also extract **Claim** facts: creditor, debtor, amount, due date, nature of the relationship (B2B between merchants / B2C / civil).
+- **Case** facts:
+  - parties;
+  - nature of the relationship (B2B between merchants / B2C / civil);
+  - amount;
+  - court seised (*tribunal judiciaire*, *tribunal de commerce / des activités économiques*, *cour d'appel*).
+- **Fact** entries:
+  - date;
+  - document type (contract, invoice, email, letter, LRAR registered letter, writ, registry record, court order, submissions);
+  - actor;
+  - short neutral summary;
+  - typed attributes, e.g. `writ.servedAt`, `writ.hearingDate`, `writ.placedAt`, `clause.type`;
+  - one or more **anchors** `{doc, page, quote}`.
 
 **Anchoring guard (model-agnostic):** each `quote` is fuzzy-matched against the source text (whitespace and accents normalised, threshold ~0.9).
 - Match → the highlight span is stored.
-- No match → the event is kept, marked *Unverified*, and excluded from computation until the lawyer confirms it.
+- No match → the fact is kept, marked *Unverified*, and excluded from the chains until the lawyer confirms it.
 
 ### 7.3 Qualification (AI)
 
-For each event, the model proposes an **effect** with reasoning and the rule it relies on:
+For each fact that needs interpretation, the model proposes a qualification with reasoning, the rule it relies on, and a confidence level. Examples:
 
-| Effect | Typical events | Rule |
+| Question | Possible answers | Why it matters |
 |---|---|---|
-| `starts` | due date of invoice; the date the creditor knew or should have known the facts | art. 2224 C. civ. |
-| `interrupts` | debtor acknowledges the debt (explicit or implied: partial payment, request for payment terms) | art. 2240 C. civ. |
-| `interrupts` | court action, including summary proceedings (*référé*) | art. 2241 C. civ. |
-| `suspends` | written agreement to mediate or conciliate → end of mediation | art. 2238 C. civ. |
-| `suspends` | pre-trial expert measure ordered → measure completed | art. 2239 C. civ. |
-| `no_effect` | ordinary formal notice, reminder, the debtor disputing the debt | — (common misconception flagged) |
-| `bars_action` | defendant's insolvency judgment | art. L622-21 C. com. |
+| What happened to the first writ? | lapsed (*caduque*) / annulled (*nulle*) / withdrawn / still pending | A lapsed or withdrawn writ loses its interruptive effect (art. 2243 C. civ.); an annulled one keeps it (art. 2241 al. 2). |
+| Is this email an acknowledgment of debt? | yes / no / uncertain | An acknowledgment restarts the limitation period (art. 2240 C. civ.). |
+| Does the contract impose prior conciliation or mediation before any court action? | mandatory clause / optional / none | A mandatory clause that was not implemented is a *fin de non-recevoir* (Cass. ch. mixte, 14 Feb 2003). |
+| Is this letter an ordinary formal notice (*mise en demeure*)? | yes / no | It does **not** interrupt the period — a common misconception. |
+| Did the defendant argue the merits before raising this objection? | yes / no | Procedural objections must be raised before any defence on the merits (art. 74 CPC). |
 
 - Each qualification has `confidence: high | medium | low` and `source: rule | ai_inferred`.
-  - `rule`: unambiguous document types (court act, signed mediation agreement).
-  - `ai_inferred`: interpretation of free text (emails, letters).
-- `ai_inferred` qualifications are **proposals**: they are not applied until the lawyer clicks **Confirm**. The UI can preview both scenarios before that.
+- `ai_inferred` qualifications are **proposals**: they are not applied until the lawyer clicks **Confirm**. The UI can preview the outcome either way.
 
-### 7.4 Limitation engine (deterministic, no LLM)
+### 7.4 Chain engine (deterministic, no LLM)
 
-Inputs: claim regime, confirmed events, as-of date. Output: limitation date, status, step-by-step calculation.
+A chain is a declarative sequence of **links**. Each link has a condition evaluated on confirmed facts and computed values, a rule reference, and an output node. Node kinds:
+
+`Fact → Requirement → Breach → Sanction → LostEffect → Consequence → Outcome (defence / remedy)`
+
+Each link evaluates to `established` / `contested` (it depends on an unconfirmed or `ai_inferred` qualification) / `broken` / `not_applicable`. A chain's outcome holds only if every link is `established`. The chain inherits `contested` if any link is contested.
+
+**Sanction regime table** (shown in the UI and used by the memo):
+
+| Sanction | When to raise | Prejudice needed? | Curable? | Raised by judge of own motion? | Effect on limitation interruption |
+|---|---|---|---|---|---|
+| Nullité de forme | Before any defence on the merits (arts. 74, 112) | Yes (art. 114) | Yes (art. 115) | No | Kept (art. 2241 al. 2) |
+| Nullité de fond | Any stage (art. 118) | No (art. 119) | Yes, until the ruling (art. 121) | In some cases (art. 120) | To verify for the case at hand |
+| Fin de non-recevoir | Any stage (art. 123) | No (art. 124) | Yes, if cured before the ruling (art. 126) — except where case law says otherwise (see C2) | In some cases (art. 125) | — |
+| Exception d'incompétence | Before any defence on the merits, together with all other procedural objections (art. 74) | — | — | Limited (art. 76) | Kept, even before an incompetent court (art. 2241 al. 2) |
+| Caducité de l'assignation | Recorded by the judge (e.g. art. 754 / 857 CPC) | — | Not as such; a new writ can be filed | Yes | **Lost** (art. 2243 + case law) |
+
+**Chain library**
+
+| ID | Chain | Links (simplified) | Key refs |
+|---|---|---|---|
+| **C1** (Must) | Writ lapse → limitation | Writ served → copy not placed with the registry in time (tribunal de commerce: at the latest 8 days before the hearing, art. 857 CPC; tribunal judiciaire: art. 754 CPC) → **caducité** → interruption void → limitation computed without it (§7.5) → new writ served after expiry → **fin de non-recevoir** → claim inadmissible | arts. 754, 857, 122 CPC; arts. 2224, 2241, 2243 C. civ.; art. L110-4 C. com. |
+| **C2** (Must) | Mandatory prior conciliation | Contract contains a mandatory prior-conciliation clause → no conciliation attempt on file before the writ → **fin de non-recevoir** → **cannot be cured by a conciliation attempted during the proceedings** → claim inadmissible; the claimant must re-file after conciliation (and limitation may then become an issue) | Cass. ch. mixte, 14 Feb 2003; Cass. ch. mixte, 12 Dec 2014; art. 122 CPC |
+| **C3** (Should) | Defendant in insolvency | Insolvency judgment → action for payment of a pre-existing debt barred → claim not declared within 2 months of BODACC publication → claim **unenforceable against the proceedings** (*inopposable*) → *relevé de forclusion* within 6 months | arts. L622-21, L622-24, L622-26, R622-24 C. com. |
+| **C4** (Could) | Order of objections | A jurisdiction clause in a B2C contract is deemed unwritten → objection of lack of jurisdiction available → but the defendant argued the merits first → objection inadmissible | arts. 48, 74 CPC; art. R212-2 C. conso. |
+| **C5** (Could) | Appeal lapse | Notice of appeal → appellant's submissions not filed in time → notice of appeal lapses → first-instance judgment becomes final | arts. 905-1 ff. / 908 ff. CPC (**check the post-2024 reform numbering**) |
+
+- Every chain shows its links in order, each with rule, inputs, sources and computed values.
+- Wording never states a legal conclusion as certain: *"Potential fin de non-recevoir — requires lawyer review."*
+- Chains are independent: several can lead to the same outcome. The UI says so ("2 independent grounds").
+
+### 7.5 Limitation sub-engine (deterministic)
+
+Used by any chain that needs a deadline (C1, C2's follow-on, C3).
 
 | ID | Rule | Logic (simplified) | Ref. |
 |---|---|---|---|
-| R1 | Base period by regime | Civil 5 years (art. 2224 C. civ.); between merchants 5 years (art. L110-4 C. com.); professional vs consumer 2 years (art. L218-2 C. conso.). The period starts on the `starts` event. | arts. 2224 C. civ., L110-4 C. com., L218-2 C. conso. |
-| R2 | Interruption | A new period of the same length starts on the interrupting event (art. 2231). For a court action, the interruption lasts until the proceedings end (art. 2242) and is void if the claimant withdraws, the action lapses, or the claim is finally rejected (art. 2243). | arts. 2231, 2240–2244 C. civ. |
-| R3 | Suspension | The clock pauses from suspension start to end; elapsed time is kept (art. 2230). After mediation or an expert measure, the remaining period is at least 6 months from the end date (arts. 2238, 2239). | arts. 2230, 2238, 2239 C. civ. |
-| R4 | No-effect events | Ordinary formal notices and reminders do not change the date. Show an explicit **"Does not interrupt"** note so the common misconception is visible. | — |
-| R5 | Defendant in insolvency | Insolvency judgment before filing → an action for payment of a pre-existing debt is barred (L622-21). Declaration deadline = BODACC publication + 2 months (R622-24; +2 months for creditors outside mainland France). If missed → *relevé de forclusion* within 6 months (L622-26). | arts. L622-21, L622-24, L622-26, R622-24 C. com. |
-| R6 | Prior amicable resolution attempt (Should) | Claim ≤ €5,000, or a neighbour dispute, and no conciliation, mediation or participatory procedure on file → risk that the claim is inadmissible. | art. 750-1 CPC |
-| R7 | Long-stop (Could) | Suspension and interruption cannot push the deadline beyond 20 years from the right arising. | art. 2232 C. civ. |
+| L1 | Base period by regime | Civil: 5 years (art. 2224 C. civ.). Between merchants: 5 years (art. L110-4 C. com.). Professional vs consumer: 2 years (art. L218-2 C. conso.). | as stated |
+| L2 | Interruption | A new period of the same length starts (art. 2231). Triggers: acknowledgment of debt (art. 2240), court action (art. 2241), enforcement measure (art. 2244). The interruption lasts until the proceedings end (art. 2242) and is **void** on withdrawal, lapse of the proceedings, final rejection (art. 2243) — and, per case law, on caducité of the writ. | arts. 2231, 2240–2244 C. civ. |
+| L3 | Suspension | The clock pauses (art. 2230). After mediation/conciliation (art. 2238) or a pre-trial expert measure (art. 2239), the remaining period is at least 6 months. | as stated |
+| L4 | No-effect events | Ordinary formal notices and reminders do not change the date. Show an explicit **"Does not interrupt"** note. | — |
+| L5 | Long-stop (Could) | No extension beyond 20 years from the right arising. | art. 2232 C. civ. |
 
 - **Computation:** the period ends at the end of its last day (art. 2229). Whether it is extended when the last day falls on a weekend or public holiday (art. 642 CPC) is a **configurable flag**; the legal reviewer decides the default.
-- **Status as of a date:** `alive (N days left)` / `expires today` / `time-barred since DATE`. The as-of date defaults to today and can be changed in the UI.
-- Every output shows the calculation as ordered steps, each citing its event and anchor.
-- Wording never says "the claim is prescribed" as a legal conclusion. It says: *"Computed limitation date — requires lawyer review."*
+- **Output:** the limitation date, the status as of a chosen date, and ordered calculation steps — each citing its fact and anchor.
 
-### 7.5 Sensitivity analysis
+### 7.6 Counterfactual analysis
 
-- For each **contested** event (an `ai_inferred` qualification, low confidence, or one the opposing party could dispute), run the engine with and without that event.
-- Display: *"Hinges on: Email of 2 June 2022 (possible acknowledgment). With it: alive until 4 Oct 2027. Without it: time-barred since 15 Jul 2026."*
-- Rank events by impact (days of difference, and whether the status flips).
-- This tells the lawyer which facts to secure evidence for, and which ones the opposing party will attack.
+The civil equivalent of a "blast radius".
 
-### 7.6 Defendant status
+- For each **contested** link (an `ai_inferred` qualification, low confidence, or one the opposing party is likely to dispute), re-run the engine with the link flipped.
+- Display: *"C1 hinges on: email of 2 June 2022 is **not** an acknowledgment of debt. If it were, the limitation period would run until 2 Jun 2027 and C1 breaks. C2 is unaffected."*
+- Also display regime contrasts as teaching counterfactuals, e.g.: *"Had the first writ been annulled rather than lapsed, its interruptive effect would have survived (art. 2241 al. 2) and C1 would break."*
+- Rank defences by robustness: number of contested links, and whether another independent chain reaches the same outcome.
 
-- Look up the defendant by SIREN (business ID) via a company registry/BODACC data source (e.g. Pappers API, BODACC open data). For the demo, a mocked JSON response with the same shape is acceptable.
-- Show: legal status (active / struck off), insolvency proceedings (type, judgment date, BODACC publication date, *mandataire judiciaire*), and the R5 deadlines with days left.
-- If the defendant is in liquidation, show that the liquidator now represents the debtor (art. L641-9 C. com.).
+### 7.7 Defence memo
 
-### 7.7 Pre-filing memo
-
-- Inputs: the claim, the confirmed events, the engine output, sensitivity results, defendant status.
+- Inputs: the case, the confirmed facts, the chain results, and the counterfactuals.
 - Sections:
-  1. Claim summary
-  2. Limitation analysis: event-by-event table with effect, rule and source
-  3. Computed status and deadline
-  4. What the conclusion hinges on
-  5. Defendant status and its consequences
-  6. Recommended next steps with dates
-  7. Points for lawyer review
-  8. Sources
+  1. Case summary
+  2. Defences, **ordered per procedural regime**: objections that must be raised *in limine litis* first, then *fins de non-recevoir*
+  3. For each defence: the chain (facts → rule → consequence) with sources; the regime (when to raise it, prejudice, curability); weak links and the expected counter-arguments
+  4. Recommended next steps with dates
+  5. Points for lawyer review
+  6. Sources
 - Case law may only be cited from a curated local list (`data/caselaw.json`); otherwise the model writes *[authority to add]*.
 - Every sentence carrying a fact has a citation chip; uncited factual sentences are underlined amber.
 - Editable; export as Markdown (DOCX if time allows).
+- **Claimant mode** (Should): the same chains produce a preventive memo — *"Place the writ with the registry by 12 Feb 2026; otherwise it lapses, and a new writ after 16 Mar 2026 would be time-barred."*
 
 ## 8. Data model (sketch)
 
@@ -179,21 +212,22 @@ Inputs: claim regime, confirmed events, as-of date. Output: limitation date, sta
 type Anchor = { doc: string; page: number; quote: string;
                 span?: { start: number; end: number }; verified: boolean };
 
-type Claim = { creditor: string; debtor: string; debtorSiren?: string; amountEur: number;
-               dueDate: string; regime: 'civil' | 'commercial' | 'consumer'; anchors: Anchor[] };
+type Case = { claimant: string; defendant: string; relationship: 'commercial' | 'civil' | 'consumer';
+              amountEur: number; court: 'tribunal_judiciaire' | 'tribunal_commerce' | 'cour_appel';
+              anchors: Anchor[] };
 
-type Effect = 'starts' | 'interrupts' | 'suspends' | 'suspension_ends' | 'no_effect' | 'bars_action';
-
-type Event = {
+type Fact = {
   id: string;
   date: string;                       // ISO date, Europe/Paris
-  docType: 'invoice' | 'contract' | 'email' | 'letter' | 'lrar' | 'mediation_agreement'
-         | 'mediation_report' | 'court_act' | 'registry_record' | 'other';
+  docType: 'contract' | 'invoice' | 'email' | 'letter' | 'lrar' | 'writ' | 'registry_record'
+         | 'court_order' | 'submissions' | 'other';
   summary: string;
+  attrs: Record<string, string | number | boolean>;   // e.g. { servedAt, hearingDate, placedAt }
   anchors: Anchor[];
-  qualification: {
-    effect: Effect;
-    rule: string;                     // e.g. "art. 2240 C. civ."
+  qualification?: {
+    label: string;                    // e.g. "writ_lapsed", "acknowledgment_of_debt", "mandatory_conciliation_clause"
+    value: string | boolean;
+    rule: string;                     // e.g. "art. 857 CPC"
     reasoning: string;
     confidence: 'high' | 'medium' | 'low';
     source: 'rule' | 'ai_inferred';
@@ -202,14 +236,18 @@ type Event = {
   };
 };
 
-type EngineResult = {
-  limitationDate: string;
-  status: { kind: 'alive' | 'expires_today' | 'time_barred'; days: number; asOf: string };
-  steps: { text: string; eventId?: string; rule?: string }[];
-};
+type NodeKind = 'fact' | 'requirement' | 'breach' | 'sanction' | 'lost_effect' | 'consequence' | 'outcome';
 
-type Sensitivity = { eventId: string; withDate: string; withoutDate: string;
-                     flipsStatus: boolean; deltaDays: number };
+type Link = { id: string; kind: NodeKind; label: string; rule?: string;
+              factIds: string[]; computed?: Record<string, string>;
+              status: 'established' | 'contested' | 'broken' | 'not_applicable' };
+
+type ChainResult = { chainId: 'C1' | 'C2' | 'C3' | 'C4' | 'C5'; title: string; links: Link[];
+                     outcome: string; status: 'holds' | 'contested' | 'fails' | 'not_applicable';
+                     hingesOn: string[] };   // link ids
+
+type Counterfactual = { linkId: string; flippedTo: string; affectedChains: string[];
+                        newStatus: Record<string, ChainResult['status']>; explanation: string };
 ```
 
 ## 9. Architecture
@@ -223,25 +261,26 @@ Documents ─▶ Text layer / OCR ─▶ Structured extraction (LLM, JSON schema
                                          ▼
                             Qualification (LLM, proposals)
                                          │
-                       lawyer confirms / rejects (UI)
+                         lawyer confirms / rejects (UI)
                                          │
              ┌───────────────────────────┼───────────────────────────┐
              ▼                           ▼                           ▼
-   Limitation engine (TS)       Sensitivity runner           Defendant status
-   deterministic, pure          (engine × scenarios)         (registry API / mock)
+   Chain engine (TS, pure)      Limitation sub-engine        Counterfactual runner
+   declarative chain library    (dates, interruptions,       (engine × flipped links)
+                                 suspensions)
              └───────────────────────────┼───────────────────────────┘
                                          ▼
-                Web UI (timeline · deadline track · source · memo)
+                Web UI (facts · chains · source · memo)  ─▶  Memo (LLM, anchored)
 ```
 
-Suggested stack (the team may change it): React + TypeScript + Vite; `pdf.js` for the viewer; Tailwind + a headless component kit; a small charting or custom SVG layer for the deadline track; a thin API (Node or Python FastAPI) that calls the model provider and serves cached results. The engine runs client-side as a pure function, so recomputation is instant.
+Suggested stack (the team may change it): React + TypeScript + Vite; `pdf.js` for the viewer; Tailwind + a headless component kit; custom SVG for the chain view and the deadline track; a thin API (Node or Python FastAPI) that calls the model provider and serves cached results. The engines run client-side as pure functions, so re-evaluation is instant. Chains are data (JSON/TS objects), so a new chain needs no UI change.
 
 ### 9.1 Model layer — Mistral first, provider-agnostic
 
-- One interface, e.g. `ocr(doc)`, `extract(text, schema)`, `qualify(event, context, schema)`, `complete(messages, schema?)`.
-- Default provider: **Mistral** — Mistral OCR for scans; a Mistral chat model with structured JSON output for extraction, qualification and the memo. Its French-language reasoning is the key strength here.
-- Other providers are selectable via an env var: `CLAIMCLOCK_PROVIDER=mistral|openai|anthropic|local`. Any OpenAI-compatible endpoint should work, including self-hosted open-weight models.
-- The limitation engine, the anchoring guard and the sensitivity runner never depend on the model provider.
+- One interface, e.g. `ocr(doc)`, `extract(text, schema)`, `qualify(fact, context, schema)`, `complete(messages, schema?)`.
+- Default provider: **Mistral** — Mistral OCR for scans; a Mistral chat model with structured JSON output for extraction, qualification and the memo. Its French-language legal reasoning is the key strength here.
+- Other providers are selectable via an env var: `DOMINO_PROVIDER=mistral|openai|anthropic|local`. Any OpenAI-compatible endpoint should work, including self-hosted open-weight models.
+- The chain engine, limitation sub-engine, anchoring guard and counterfactual runner never depend on the model provider.
 - All model outputs are validated against the schema. On failure: retry once, then fall back to cached results.
 - Pitch line: open weights allow on-premise deployment, which protects *secret professionnel*.
 
@@ -251,52 +290,54 @@ UI/UX is a first-class deliverable. The product must feel like a **precise legal
 
 ### 10.1 Design principles
 
-1. **Evidence first.** No claim without a visible source. One click from any event to the highlighted passage.
-2. **Show your work.** Every date shows the rule and the calculation that produced it.
+1. **Evidence first.** No claim without a visible source. One click from any link to the highlighted passage.
+2. **Show your work.** Every link shows its rule, inputs and computed values; every date shows its calculation.
 3. **AI is visibly labelled.** AI-inferred qualifications and draft prose carry a consistent *AI-inferred* marker; deterministic results do not.
-4. **The lawyer decides.** AI qualifications are proposals until confirmed; every confirmation updates the result immediately.
+4. **The lawyer decides.** AI qualifications are proposals until confirmed; every confirmation updates the chains immediately.
 5. **Calm density.** Information-rich but quiet: neutral palette, one accent colour per meaning, no gratuitous animation.
 
 ### 10.2 Layout (desktop, target 1440×900)
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ ClaimClock · Atelier Lumière v. Bâtiself   [Review | Deadline | Memo]   As of: 04 Oct 2026 │
-│ Status: ● ALIVE — 365 days left   (hinges on 1 contested event)                         │
-├────────────────┬──────────────────────────────────────┬──────────────────────┤
-│ Events         │ Main panel                           │ Source viewer        │
-│ (chronological)│ Review: event detail + qualification │ document, highlighted│
-│ effect badges  │ Deadline: deadline track + scenarios │ passage, doc index   │
-│                │ Memo: editor                         │                      │
-└────────────────┴──────────────────────────────────────┴──────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ Domino · Atelier Lumière v. Bâtiself   [Facts | Chains | Memo]   As of: 04 Oct 2026 │
+│ ● 2 independent grounds for inadmissibility · 1 contested link                         │
+├────────────────┬───────────────────────────────────────┬──────────────────────┤
+│ Facts          │ Main panel                            │ Source viewer        │
+│ (chronological)│ Facts: fact detail + qualification    │ document, highlighted│
+│ qualification  │ Chains: domino lanes + link detail    │ passage, doc index   │
+│ badges         │ Memo: editor                          │                      │
+└────────────────┴───────────────────────────────────────┴──────────────────────┘
 ```
 
-- The **status banner** is always visible: it is the product's answer. Colour + icon + text, e.g. *ALIVE — 365 days left* / *TIME-BARRED since 15 Jul 2026*.
+- The **summary banner** is always visible: it is the product's answer, e.g. *2 independent grounds · 1 contested link* or *Provisional — 2 qualifications awaiting review*.
 - Panels are resizable; the source viewer can collapse.
-- The mode switcher is the primary navigation and follows the demo story (Review → Deadline → Memo).
+- The mode switcher is the primary navigation and follows the demo story (Facts → Chains → Memo).
 
 ### 10.3 Screens and key interactions
 
 **Start screen**
-- Large drop zone and a prominent **"Load sample file"** button (the demo path).
-- Staged progress with live counters (documents read, events found, qualifications proposed). Never a spinner without words.
+- Large drop zone and a prominent **"Load sample case"** button (the demo path).
+- Staged progress with live counters (documents read, facts found, qualifications proposed, chains evaluated). Never a spinner without words.
 
-**Review mode**
-- Event list: date, document-type icon, one-line summary, **effect badge** (*Starts*, *Interrupts*, *Suspends*, *No effect*, *Bars action*), and an *AI-inferred* marker where applicable.
-- Event detail:
-  - The quoted passage, in serif type, with a source chip (`Email · 02/06/2022 · p.1`) that highlights it in the viewer.
-  - Proposed effect, rule, reasoning (2–3 lines), confidence.
-  - Actions: **Confirm**, **Reject** (requires a short note), **Preview impact** (hover/press to show the deadline with and without this event).
-- *No effect* events show an explicit **"Does not interrupt — art. 2240/2241 not met"** note, so the common misconception is visible.
+**Facts mode**
+- Fact list: date, document-type icon, one-line summary, qualification badge, and an *AI-inferred* marker where applicable.
+- Fact detail:
+  - The quoted passage, in serif type, with a source chip (`Writ · 12/01/2026 · p.1`) that highlights it in the viewer.
+  - Proposed qualification, rule, reasoning (2–3 lines), confidence.
+  - Actions: **Confirm**, **Reject** (requires a short note), **Preview impact** (shows which chains change).
+- *No effect* facts show an explicit note, e.g. **"Mise en demeure — does not interrupt the limitation period"**.
 
-**Deadline mode**
-- **Deadline track**: a horizontal time axis from the start event to the computed limitation date.
-  - Running periods = solid bar; suspension = hatched gap; interruption = a restart marker with a new bar; no-effect events = small grey ticks.
-  - An "As of" marker (today line) and the **limitation-date marker**.
-  - When a qualification is confirmed or rejected, the limitation-date marker **animates to its new position** (~400 ms) and the status banner updates. This is the key demo moment.
-- **Calculation panel**: ordered steps in monospace, each with its rule and source chip.
-- **Sensitivity panel**: contested events ranked by impact, each with *with / without* dates and a status-flip indicator. A toggle per event lets the lawyer explore scenarios without confirming anything.
-- **Defendant card**: registry status, insolvency proceedings, R5 deadlines with a countdown (*Declare claim by 10 Nov 2026 — 37 days left*), and a "Data source: live / mocked" label.
+**Chains mode** (the hero screen)
+- **Domino lanes**: one horizontal lane per applicable chain, read left to right: `Fact → Requirement → Breach → Sanction → Lost effect → Consequence → Outcome`.
+  - Each node is a compact card: kind label, one-line statement, rule ref, source-chip count.
+  - Link status: *established* = solid ink connector; *contested* = dashed connector + violet *AI-inferred* tag; *broken* = connector visibly severed, and downstream nodes greyed out.
+  - Outcome node at the right: *"Fin de non-recevoir — claim inadmissible"*, with the chain status.
+- Click a node → link detail in a drawer: rule text, inputs, computed values (monospace), sources (clicking highlights them in the viewer), and the sanction regime row from §7.4.
+- **Time nodes** expand into a **deadline track**: a horizontal axis from the start of the limitation period to its expiry. Running period = solid bar; suspension = hatched gap; interruption = restart marker; a voided interruption = struck-through marker; plus an "As of" line.
+- **Counterfactual toggles** on contested links (e.g. *"Treat email of 02/06/2022 as an acknowledgment"*). Flipping one makes the downstream nodes **fall in sequence** (~120 ms per node, subtle tilt + fade) or stand back up. This is the key demo moment.
+- **Regime contrast hint** on the sanction node: *"If annulled instead of lapsed → interruption kept (art. 2241 al. 2) → chain breaks."*
+- **Robustness summary**: defences ranked by number of contested links, with an "independent grounds" indicator.
 
 **Memo mode**
 - Structured document with the sections of §7.7; citation chips inline.
@@ -305,88 +346,90 @@ UI/UX is a first-class deliverable. The product must feel like a **precise legal
 
 ### 10.4 Visual language
 
-- Colours: neutral greys/ink; **green** = alive / safe margin; **red** = time-barred / action barred; **amber** = unverified, or under 90 days left; **violet** (or one other distinct hue) = AI-inferred. Colour is never the only signal: always add icons, patterns (hatched suspension) and labels.
+- Colours: neutral greys/ink; **red** = sanction / claim knocked out; **green** = claim survives / link broken in the claimant's favour; **amber** = unverified or needs attention; **violet** (or one other distinct hue) = AI-inferred. Colour is never the only signal: always add icons, line styles (solid / dashed / severed) and labels.
 - Typography: sans-serif for the UI; serif for document excerpts and the memo; monospace for dates and calculations.
-- Dates in French format (`02/06/2022`) in content, and an unambiguous `2 Jun 2022` in UI chrome. Legal terms stay in French (*mise en demeure, fin de non-recevoir, mandataire judiciaire*); the UI chrome is in English. Source documents are in French.
+- Dates in French format (`12/01/2026`) in content, and an unambiguous `12 Jan 2026` in UI chrome. Legal terms stay in French (*assignation, placement, caducité, fin de non-recevoir, mise en demeure*); the UI chrome is in English. Source documents are in French.
 
 ### 10.5 States
 
-- **Empty**: guidance + sample file button.
+- **Empty**: guidance + sample case button.
 - **Loading**: staged progress and skeletons matching the final layout.
-- **Unverified event**: amber badge; excluded from computation until confirmed.
-- **Pending qualifications**: the banner shows *"Provisional — 2 qualifications awaiting review"*.
+- **Unverified fact**: amber badge; excluded from the chains until confirmed.
+- **Pending qualifications**: the banner shows *"Provisional — N qualifications awaiting review"*; the affected links are dashed.
+- **No chain applies**: explicit *"No ground found among the N enabled chains"* (never implies the claim is safe).
 - **Model error / timeout**: non-blocking toast, automatic fallback to cache, labelled *"Showing cached analysis"*.
-- **Registry unavailable**: card shows *"Defendant status not verified"* (never implies the defendant is solvent).
 
 ### 10.6 Accessibility and quality bar
 
-- Keyboard: `J`/`K` move between events, `C` confirm, `R` reject, `1`/`2`/`3` switch modes, `Esc` closes popovers.
-- WCAG AA contrast; visible focus rings.
-- No layout shift when switching modes. Recomputation and UI responses take under 100 ms (model calls excluded).
+- Keyboard: `J`/`K` move between facts or nodes, `C` confirm, `R` reject, `1`/`2`/`3` switch modes, `Esc` closes drawers.
+- WCAG AA contrast; visible focus rings; `prefers-reduced-motion` disables the domino animation.
+- No layout shift when switching modes. Re-evaluation and UI responses take under 100 ms (model calls excluded).
 
 ### 10.7 Demo polish
 
-- Precomputed results for the sample file; fixed as-of date for the demo (configurable).
+- Precomputed results for the sample case; fixed as-of date for the demo (configurable); fixed lane layout.
 - **Presenter mode**: larger font, hides dev controls.
 - The 2-minute script in §12 must be executable in 8 clicks or fewer.
 
-## 11. Synthetic client file
+## 11. Synthetic case file
 
-B2B unpaid-invoice dispute, French documents, all names fictitious. Dates assume a demo as-of date of **4 Oct 2026**; shift them if the demo date changes.
+Commercial dispute. **We act for the defendant**, Bâtiself SARL, sued by Atelier Lumière SAS for an unpaid invoice. French documents, all names fictitious. Dates assume a demo as-of date of **4 Oct 2026**.
 
 | # | Document | Date | Purpose |
 |---|---|---|---|
-| 1 | Supply contract, Atelier Lumière SAS → Bâtiself SARL | 2020-11-05 | Regime: commercial (both are merchants) → 5 years |
-| 2 | Invoice F-2021-034, €18,400, due | 2021-03-15 | `starts` → base date 15 Mar 2026 |
-| 3 | Debtor email: *"Nous contestons la conformité de la livraison."* | 2021-04-02 | **Distractor**: disputing the debt ≠ acknowledgment → `no_effect` |
-| 4 | Debtor director's email: *"Nous réglerons le solde le mois prochain, merci de votre patience."* | 2022-06-02 | **Key contested event**: possible acknowledgment (art. 2240) → `interrupts`, AI-inferred |
-| 5 | *Mise en demeure* sent by registered letter (LRAR) + scanned receipt | 2023-02-10 | **Misconception**: `no_effect` |
-| 6 | Signed mediation agreement | 2024-01-15 | `suspends` |
-| 7 | Mediator's report recording the failure | 2024-05-15 | `suspension_ends` |
-| 8 | Registry/BODACC record: Bâtiself placed in *redressement judiciaire* (judgment 25 Aug 2026, published 10 Sep 2026) | 2026-09-10 | `bars_action` → declare by 10 Nov 2026 |
+| 1 | Supply contract; art. 14: *"Tout différend… sera soumis, préalablement à toute action judiciaire, à une tentative de conciliation…"* | 2020-11-05 | Regime: commercial → 5 years. **C2 trigger**: mandatory prior-conciliation clause (AI-inferred) |
+| 2 | Invoice F-2021-034, €18,400, due | 2021-03-15 | Limitation starts → base expiry 15 Mar 2026 (Sunday → 16 Mar 2026 if the art. 642 flag is on) |
+| 3 | Debtor email: *"Nous allons étudier votre facture et revenons vers vous."* | 2022-06-02 | **Contested fact**: probably *not* an acknowledgment of debt (AI-inferred, medium confidence). This is the counterfactual for C1. |
+| 4 | *Mise en demeure* sent by registered letter (LRAR) + scanned receipt | 2023-02-10 | **Misconception**: does not interrupt |
+| 5 | First writ before the *tribunal de commerce*, served 12 Jan 2026, hearing on 20 Feb 2026 | 2026-01-12 | Would interrupt the limitation period (art. 2241) |
+| 6 | Registry stamp: copy of the writ placed on 16 Feb 2026 | 2026-02-16 | **Breach**: deadline = 8 days before the hearing = 12 Feb 2026 (art. 857 CPC) |
+| 7 | Court order recording the lapse (*ordonnance de caducité*) | 2026-02-20 | Sanction: caducité → interruption void |
+| 8 | Second writ, served 8 Apr 2026, hearing on 20 Oct 2026 | 2026-04-08 | Served after 16 Mar 2026 → time-barred → **C1 outcome** |
+| 9 | No conciliation record anywhere in the file | — | **C2 breach** (shown as "required document not found") |
 
 Expected engine results (to be validated by the legal reviewer):
-- **Without #4:** 15 Mar 2026; the 4-month suspension pushes it to **15 Jul 2026** → *time-barred* as of 4 Oct 2026.
-- **With #4 confirmed:** a new 5-year period from 2 Jun 2022 → 2 Jun 2027; the 4-month suspension pushes it to 2 Oct 2027 (a Saturday) → **4 Oct 2027** if the art. 642 CPC extension flag is on → *alive*.
-- **R5:** suing for payment is barred anyway. **Declare the claim to the *mandataire judiciaire* by 10 Nov 2026 (37 days left).**
-- #3 and #5 must not change the date.
+- **C1 holds** (contested on #3): the interruption by #5 is void because of #7. The period expired on 15/16 Mar 2026; writ #8 of 8 Apr 2026 is out of time → *fin de non-recevoir*.
+- **Counterfactual on #3:** if #3 is an acknowledgment, a new period runs until 2 Jun 2027 → **C1 breaks**.
+- **Counterfactual on #7:** if #5 had been *annulled* instead of lapsing, its interruption would survive (art. 2241 al. 2) → **C1 breaks**.
+- **C2 holds** independently of #3: the conciliation clause was not implemented, and this cannot be cured during the proceedings → *fin de non-recevoir*.
+- Banner: **2 independent grounds · 1 contested link**. The hearing is in 16 days.
+- #4 must not change any date.
 
-Some documents should be lightly degraded scans (the LRAR receipt, the signed mediation agreement) to exercise OCR.
+Some documents should be lightly degraded scans (the LRAR receipt, the registry stamp, the court order) to exercise OCR.
 
 ## 12. Demo script (2 minutes)
 
-1. **Load sample file** → staged progress → events appear. Banner: *Provisional*.
-2. The naive answer: invoice due 15 Mar 2021 + 5 years. The *mise en demeure* shows **"Does not interrupt"**. The mediation is shown as a hatched gap on the track. Banner: **TIME-BARRED since 15 Jul 2026**.
-3. ClaimClock highlights the 2022 email: *AI-inferred — possible acknowledgment of debt (art. 2240)*. Click the source chip → the passage is highlighted.
-4. Click **Confirm** → the limitation marker slides to **4 Oct 2027**, and the banner turns green: **ALIVE**. *"This claim lives or dies on one email."*
-5. Defendant card: *redressement judiciaire* → **Don't file — declare the claim by 10 Nov 2026 (37 days left).**
-6. **Memo** → source-cited pre-filing memo, ready to edit.
-7. Close on the principle: *AI finds and qualifies the facts. Rules compute the deadline. Lawyers decide.*
+1. **Load sample case** → staged progress → facts appear. Banner: *Provisional*.
+2. **Chains** → lane C1 builds left to right: *writ served → placed 16/02, due by 12/02 → caducité → interruption void → limitation expired 16/03 → second writ 08/04 → fin de non-recevoir.* Click the registry-stamp node → the stamp is highlighted in the scan.
+3. Sanction node hint: *"Annulled ≠ lapsed: an annulled writ would have kept its interruptive effect."* The lawyers on the jury nod.
+4. Toggle the counterfactual *"Treat the 2022 email as an acknowledgment"* → the C1 dominoes fall back up; the banner changes. *"This is where the claimant will attack."* Toggle it back.
+5. Lane C2: *mandatory conciliation clause → no attempt on file → cannot be cured → fin de non-recevoir.* Banner: **2 independent grounds**.
+6. **Memo** → defence memo with arguments ordered by procedural regime, each fact source-cited.
+7. Close on the principle: *AI finds and qualifies the facts. Rules run the chain. Lawyers decide.*
 
 ## 13. Success criteria
 
-- 100% of displayed events are anchored or marked *Unverified*.
-- Every planted event is correctly qualified: the distractor and the *mise en demeure* produce no effect; the mediation suspends; the email is proposed as an acknowledgment.
-- Engine results match §11 exactly; recomputation takes under 100 ms.
+- 100% of displayed facts are anchored or marked *Unverified*.
+- Every planted fact is correctly qualified: the writ lapsed (not annulled); the clause is mandatory; the *mise en demeure* has no effect; the 2022 email is flagged as contested.
+- Chain and counterfactual results match §11 exactly; re-evaluation takes under 100 ms.
 - The demo runs end-to-end in under 2 minutes, online or from cache.
-- A lawyer on the jury can verify any date from the UI alone.
+- A lawyer on the jury can verify any link from the UI alone.
 
 ## 14. One-day plan
 
 | Time | Legal | AI / backend | Frontend / UX |
 |---|---|---|---|
-| H0–1 | Fix the scenario, dates, and the rule specs | Provider interface, schemas | Layout shell, design tokens |
-| H1–4 | Write the synthetic documents; expected results | Extraction + anchoring guard + qualification prompts | Event list, source viewer, event detail |
-| H4–6 | Review the engine output against §11 | Limitation engine + unit tests, sensitivity runner, defendant mock | Deadline track + live recompute animation |
-| H6–7 | Curated case-law list, memo review | Memo generation, cache | Memo mode, defendant card |
-| H7–8 | Pitch | Hardening, fallback | Polish, presenter mode, rehearsal |
+| H0–1 | Fix the scenario, dates, and the C1/C2 link specs | Provider interface, schemas | Layout shell, design tokens |
+| H1–4 | Write the synthetic documents; expected results | Extraction + anchoring guard + qualification prompts | Fact list, source viewer, fact detail |
+| H4–6 | Review the engine output against §11 | Chain engine + limitation sub-engine + unit tests; counterfactual runner | Domino lanes, link drawer, deadline track, toggles |
+| H6–7 | Curated case-law list, memo review | Memo generation, cache | Memo mode |
+| H7–8 | Pitch | Hardening, fallback | Polish, animation, presenter mode, rehearsal |
 
 ## 15. Risks and open questions
 
-- **Art. 642 CPC extension** for limitation periods: confirm the default with the legal reviewer (it is a configurable flag).
-- **Qualification quality** on ambiguous emails → strict JSON schema, few-shot examples, always lawyer-confirmed.
-- **Special limitation regimes** (consumer, insurance, construction, employment) → out of scope; the regime is chosen explicitly, with the 3 regimes of R1 only.
-- **Registry API access** (keys, rate limits) → a mocked response with the same shape is acceptable for the demo.
+- **Legal accuracy**: placement deadlines (arts. 754 / 857 CPC, and the procedure applicable before the *tribunal des activités économiques* where relevant); the case law on caducité and interruption; the cure rules for C2; the art. 642 CPC flag. All to be confirmed by the legal reviewer.
+- **Qualification quality** on ambiguous French text → strict JSON schema, few-shot examples, always lawyer-confirmed.
+- **Scope creep**: the chain library could grow without bound → two chains for the demo; C3–C5 are optional extras.
 - **OCR coordinates**: if the chosen OCR returns no text-level positions, highlight via page + fuzzy quote match on the `pdf.js` text layer.
-- **Over-claiming** → never say "the claim is prescribed" or "zero hallucination"; say "computed date, source-anchored, requires lawyer review".
-- **Time** → R6, defendant mode, DOCX export and live upload are the first to cut.
+- **Over-claiming** → never say "the claim is inadmissible" as a certainty, or "zero hallucination"; say "potential ground, source-anchored, requires lawyer review".
+- **Time** → C3, claimant mode, DOCX export and live upload are the first to cut.
