@@ -1,5 +1,11 @@
 import { createServer } from 'node:http';
 import { createHandler } from './api.ts';
+import { startRealtimeServer, type RealtimeRuntime } from './realtime-server.ts';
+const runtime=(globalThis as unknown as {Bun?:RealtimeRuntime}).Bun;
+if(!runtime)throw Error('Realtime voice server requires Bun (native WebSocket support). Run npm run voice:server.');
+const realtime=startRealtimeServer(runtime,process.env.MISTRAL_API_KEY??'',Number(process.env.VOICE_REALTIME_PORT??8788));
+process.on('SIGTERM',()=>{realtime.stop(true);server.close(()=>process.exit(0));});
+process.on('SIGINT',()=>{realtime.stop(true);server.close(()=>process.exit(0));});
 const port = Number(process.env.VOICE_PORT ?? 8787);
 const server = createServer(createHandler());
 server.requestTimeout = 40_000;

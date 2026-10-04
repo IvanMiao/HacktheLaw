@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "voice:server": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.ts",
+    "voice:server": "bun server/index.ts",
     "voice:smoke": "node scripts/live-smoke.mjs",
     "typecheck:server": "tsc -p tsconfig.server.json",
     "build": "tsc -b && vite build",

@@ -15,7 +15,7 @@ const body = () => JSON.stringify({ text: 'Show clause evidence', context: build
 describe('local Mistral API (test-only injected provider)', () => {
  it('reports missing key and keeps errors redacted', async () => {
   const url = await start({ apiKey: '' });
-  expect(await (await fetch(url + '/api/status')).json()).toMatchObject({ configured: false, intentModel:'ministral-8b-latest' });
+  expect(await (await fetch(url + '/api/status')).json()).toMatchObject({ configured: false, intentModel:'ministral-8b-latest', realtimeModel:'voxtral-mini-transcribe-realtime-2602', realtimeFormat:'pcm_s16le/16000/mono' });
   const r = await fetch(url + '/api/intent', { method:'POST', headers:{'Content-Type':'application/json'}, body:body() });
   expect(r.status).toBe(503); expect(await r.json()).toMatchObject({error:'Mistral is not configured. Set MISTRAL_API_KEY on the local server.'});
  });
@@ -75,6 +75,13 @@ describe('local Mistral API (test-only injected provider)', () => {
   const response=await fetch(url+'/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:body()});
   expect(response.status).toBe(429); expect(response.headers.get('retry-after')).toBe('60');
   const text=await response.text(); expect(text).toContain('rate limit'); expect(text).not.toContain('private');
+ });
+ it('aborts upstream intent work when OFF disconnects the browser request', async()=>{
+  let started!:()=>void;const ready=new Promise<void>(r=>{started=r;});let upstreamSignal!:AbortSignal;
+  const provider=vi.fn((_url,options)=>{upstreamSignal=options.signal;started();return new Promise<Response>((_resolve,reject)=>upstreamSignal.addEventListener('abort',()=>reject(upstreamSignal.reason)));});
+  const url=await start({apiKey:'key1',fetchImpl:provider});const controller=new AbortController();
+  const pending=fetch(url+'/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:body(),signal:controller.signal}).catch(()=>null);
+  await ready;controller.abort();await pending;await new Promise(r=>setTimeout(r,30));expect(upstreamSignal.aborted).toBe(true);
  });
  it('blocks cross-origin browser requests', async () => {
   const url = await start({apiKey:'dummy'});

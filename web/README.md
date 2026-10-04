@@ -1,72 +1,71 @@
 # Domino — web demo
 
-The original teammate demo remains intact: precomputed fact qualifications, deterministic C1/C2 chains, limitation calculations, source highlighting, manual lawyer review, counterfactual controls and the memo. The **command desk** adds real hosted Mistral speech transcription and structured command interpretation; it does not replace the synthetic case or legal engine.
+The teammate's deterministic legal engine, Facts/Chains/Memo, source highlighting and manual review remain intact. The command desk now provides **continuous realtime Mistral voice interaction**, not talk–stop–review–apply. Current legal command IDs still describe the original C1/C2 sample; C3–C5 integration is a separate lane and must update the context/allowlists before claiming voice support for those cases.
 
 ## Run locally
 
-Use Node **24.12+** or **26+** (supported by the existing Vitest dependency). This implementation was exercised on Node 25.8.0; `npm ci` emits the existing Vitest engine warning there, but all gates pass. Native Node TypeScript stripping is used for the small backend; no backend dependencies were added.
+Requirements: Node/npm for the existing Vite/Vitest toolchain, and **Bun** for its native authenticated WebSocket client/server. Verified on Node 25.8.0 and Bun 1.3.13. No new npm dependency was installed. Supported Vitest Node versions are 24.12+ or 26+; the pre-existing engine warning on Node 25 does not prevent the verified gates.
 
 From `web/`:
-
 1. `npm ci`
-2. Create `.env.local` using `.env.example` as the template and set `MISTRAL_API_KEY` securely. Keep it server-only; never name a secret `VITE_*`. `.env`, `.env.*` and verification artifacts are ignored; `.env.example` has no secret.
-3. Terminal A: `npm run voice:server` — loopback API at http://127.0.0.1:8787. The launcher reads `.env` and `.env.local`; exported environment values take precedence. Missing configuration is reported, not silently simulated.
-4. Terminal B: `npm run dev` — http://localhost:5173. Keep port 5173 available; the backend only accepts browser origins `localhost:5173` and `127.0.0.1:5173`. Vite proxies `/api` to the local backend.
-5. Load the bundled synthetic case, or open `http://localhost:5173/?mode=chains`.
+2. Create ignored `.env.local` from `.env.example`, setting `MISTRAL_API_KEY` securely. Never use `VITE_*` for a secret. Bun loads `.env`/`.env.local`; exported values take precedence.
+3. Terminal A: `npm run voice:server` — HTTP API http://127.0.0.1:8787 and native WS bridge on loopback port 8788. Status endpoint: **http://127.0.0.1:8787/api/status**, not `/api/health`.
+4. Terminal B: `npm run dev` — **http://localhost:5173**. Vite proxies `/api/realtime` with WebSocket upgrade to 8788 and other `/api` calls to 8787. Keep these ports available. Browser origins are strictly `localhost:5173` and `127.0.0.1:5173`.
+5. Load the sample case; optionally select Chains before talking.
 
-No key is bundled or sent to the browser. This is a **local-development** server, not an authenticated public service: do not expose or deploy the key-backed endpoints without a separate security/deployment review. `vite preview` is only a static frontend preview and does not provide the API proxy.
+The long-lived key stays server-side, including during the upstream WS handshake. The local bridge permits only PCM audio frames, fixed provider/model/format, two active sockets, 6400-byte frame limits, handshake timeout, native ping/idle handling, and bounded backpressure. Do not expose these local-development endpoints publicly without a separate auth/security/deployment review. Static `vite preview` does not supply these proxies. No push/merge/deployment is part of this delivery.
 
-## Voice / text workflow
+## Continuous listening
 
-- Click **Start recording** to request microphone permission. Click **Stop recording**, or let the 15-second bound stop it. **Cancel** aborts processing and invalidates late results. Tracks are released on stop/cancel/unmount. Maximum audio is 4 MB; supported negotiated formats include WebM/Opus and MP4.
-- A bounded clip is sent to **Voxtral Mini Transcribe 2**, model `voxtral-mini-2602`, through `POST https://api.mistral.ai/v1/audio/transcriptions` using upstream multipart `model` + `file`. The browser-to-local-server upload is the raw audio blob with its MIME type. Transcript appears **after stopping**, not as streaming partial speech.
-- Review/edit the transcript, or directly type in English, French or Chinese. Click **Apply command**. Text entry does not activate the teammate's global legal-review shortcuts.
-- The local backend calls `POST https://api.mistral.ai/v1/chat/completions` with a strict **per-action JSON schema**. Default intent model is **`ministral-8b-latest`**, which was actually verified. Override only on the server with `MISTRAL_INTENT_MODEL`. The initially tried `mistral-small-latest` returned HTTP 429 with the supplied account; it is **not** claimed verified.
-- Every returned action, target, boolean and source ID is validated on both server and client. No arbitrary tools, code execution or legal-fact confirmation are possible. Unsupported requests fail clearly without changing state. Provider limits/timeouts/errors have no fake offline/provider fallback; the original demo controls remain available.
-- Explanations and challenge summaries are generated from **the existing deterministic engine**, not free-form model legal opinions. Sources retain the teammate's real/mock provenance labels. Previews are visibly **hypothetical**, idempotent and separate from lawyer decisions. Restore clears only `whatIf`, preserving decisions and the art. 642 setting.
-- The command panel has English/Chinese labels without translating/replacing the teammate's English UI.
+- Turn **Continuous listening ON** using a user gesture and allow the microphone. It remains ON across utterances: no manual Stop or Apply. Browser AudioWorklet continuously captures mono samples and converts any actual AudioContext sample rate (tested at 16/44.1/48 kHz) into little-endian PCM16 at 16 kHz, in 20 ms frames. No MediaRecorder chunk uploads or browser SpeechRecognition are used in this path.
+- The bridge authenticates `wss://api.mistral.ai/v1/audio/transcriptions/realtime?model=voxtral-mini-transcribe-realtime-2602`. Following the official SDK: wait for `session.created`, send `session.update` with `{audio_format:{encoding:"pcm_s16le",sample_rate:16000},target_streaming_delay_ms:480}`, wait for `session.updated`, then send `input_audio.append` containing base64 PCM. `transcription.text.delta` drives visible partial text. A continuous stream does **not** produce `transcription.done` after every spoken command; that is session termination, not endpointing.
+- Pause after a complete command. Execution requires both 1.4 seconds of acoustic quiet and 1.1 seconds of stable transcript. Pure acoustic silence cannot trigger an action even if the provider emits text. These are conservative heuristics, not a claim of semantic sentence-boundary perfection; talk in short complete commands and pause between them.
+- Each completed utterance automatically calls the existing `/api/intent` with fresh demo context and real **`ministral-8b-latest`** strict structured output. A serialized queue prevents concurrent actions. Repeating a preview remains idempotent rather than toggling it off. Unsupported, ungrounded or legal-confirmation commands fail closed. Navigation/read-only explanations/hypothetical previews/reset are the only automatic actions.
+- **OFF / Cancel / unmount** closes the socket, stops tracks and AudioContext, clears endpoint/reconnect timers and the intent queue, aborts pending requests and discards late responses. Permission-pending acquisition is also invalidated; newly granted tracks are stopped without starting capture.
+- Transient disconnection discards incomplete speech and tries at most two reconnects (600/1200 ms) over one ON session. Audio during reconnect is explicitly not sent. Auth/policy/invalid-audio errors do not retry. Terminal failure turns the microphone OFF; the switch or typed fallback can retry.
+- The panel shows microphone ON/connecting/reconnecting/OFF/failed separately from Heard/Executing/Answered, partial transcript and last grounded result. **Typed fallback** exists only while listening is OFF; its form, submit and restore buttons are removed entirely while ON. No TTS is enabled, avoiding a feedback loop.
 
-Supported actions: `show_evidence`, `explain_link`, `preview_scenario`, `reset_scenario`, `show_mode`, `challenge_defence` (read-only). `unsupported` is an explicit no-op result.
+Previews are visibly hypothetical and never alter confirmed/rejected lawyer decisions. Engine-generated explanations retain real/mock source labels and cannot certify legal outcomes. Audio, transcripts and demo context are sent to Mistral; do not use confidential client information. Actual human microphone hardware/permission/audio quality remains **unverified** until a consented user test.
 
-Examples:
-- “What if the 2022 email acknowledges the debt?” → `q-email=true`; C1 breaks while C2 remains provisional.
-- “Et si la conciliation avait été tentée avant l’assignation ?” → `q-concil=false`; **false** means an attempt occurred before filing, since this demo's true value means no attempt on file.
-- “Show me the mandatory conciliation clause.” → actual contract and highlighted art. 14 passage.
-- “Explain why C1 loses interruption.” / “Challenge the defence.”
-- “Show the memo.” / “Reset the scenario.”
+Examples: “What if the 2022 email acknowledges the debt?”; “Et si la conciliation avait été tentée avant l’assignation ?”; “Show the mandatory conciliation clause”; “Explain why C1 loses interruption”; “Reset the scenario”. `q-concil=false` means conciliation was attempted before filing, because the sample's true value means no attempt on file.
 
-Privacy: audio, command text and the bundled demo context go to Mistral via your server. Do not use confidential client information. Human microphone permission and hardware quality still require an explicit, consented user test. No browser `SpeechRecognition` is used or presented as Mistral.
+## Verification and evidence
 
-## Verification and reproducibility
+- `npm test`: **65 tests / 10 files**, preserving the original 41-test baseline. New coverage: silence/stabilization/debounce, repeated utterances, serialized ordering, failure recovery, OFF/late-response cancellation, permission denial/pending permission, worklet initialization cleanup, bounded reconnect, persistent two-command sessions, actual worklet resampling/PCM encoding, native server origin/frame policy and official provider handshake. Provider/resource mocks are explicitly unit-only.
+- `npm run build`, `npm run typecheck:server`, `npm run lint`: required clean gates.
+- Real provider protocol probe: `node --env-file=.env.local scripts/realtime-provider-smoke.mjs --live`. This separate opt-in probe uses official short-lived session tokens and native Node WebSocket, not browser/bridge acceptance. It reads the generated audio files below and makes one realtime STT session + two real intent calls; the token-mint request is additional but not generation. It never writes/prints tokens or keys.
+- Actual browser acceptance used generated speech through a synthetic MediaStream, **real AudioWorklet/PCM**, a single same-origin **Bun WS bridge**, real Mistral delta events and real intents, the original engine and rendered DOM. In one ON session without any intervening click, email changed C1 to fails/C2 contested and reset restored both to contested. Partial speech was visible. Lawyer decisions remained equal. A third real intent response was deliberately held by the test fixture, OFF was clicked, then the response released: no late action; socket/tracks/contexts were closed. This is synthetic browser audio, **not human microphone acceptance**.
+- This revision used **10 short generation calls**: three realtime sessions (protocol probe, initial browser and final revised-UI browser), two probe intents and five browser intents. Three final calls were necessary to re-verify the explicit revised requirement after hiding the typed controls and repairing queued-context synchronization. The separate official token mint is not counted as generation. Provider request-ID headers were absent; receipts retain null, not invented IDs.
 
-- `npm test` — **41 tests / 6 files**, including all original 7 engine tests; strict target/source validation, polarity, idempotency, decision-preserving reset, missing key, audio limits/MIME, timeout, redacted rate-limit recovery, track cleanup, cancellation/stale-response guards and accessible panel rendering. Provider mocks are explicitly test-only.
-- `npm run build` — TypeScript + production Vite bundle.
-- `npm run typecheck:server` — strict backend/shared-contract TypeScript check.
-- `npm run lint` — clean, with no outstanding lint warnings.
+Ignored local evidence under `web/.verification/`:
+- `realtime-provider-evidence.json`: actual provider session/deltas, two intents, engine statuses and decision invariants.
+- `realtime-browser-final-evidence.json`: final real-provider run after UI/context fixes; **ON once, two commands with zero intervening/typed-submit clicks, OFF once**, one socket, visible partials, C1/reset DOM and closed resources; typed form absent while ON and returned OFF.
+- `realtime-browser-evidence.json`: initial actual bridge/deltas/intent receipts, partial and result DOM timeline, OFF race and closed resources. Initial untrusted `.click()` suspended the synthetic AudioContext; a trusted CDP mouse gesture retried before playback, recorded as preflight rather than hidden.
+- `realtime-status-red.log`, `realtime-final-gates.log`, `realtime-security.json`, `realtime-tdd-evidence.json`: regression/RED/GREEN/security evidence.
+- `realtime-email.wav`, `realtime-reset.wav`: non-sensitive macOS-generated speech, mono PCM16/16 kHz.
 
-Actual acceptance on this worktree included macOS-generated non-sensitive spoken audio → **real browser MediaRecorder** on a synthetic audio stream → **real Voxtral HTTP 200 transcript** → **real Ministral HTTP 200 intent** → the existing engine and actual DOM. English email and French conciliation commands preserved decisions; source navigation highlighted the actual contract; local reset restored baseline. The original transcript was explicitly reused for the repaired intent probe after a schema issue; this is recorded, not disguised as a fresh STT call.
+To regenerate the audio on macOS, use `say -v Samantha -r 155 -o .verification/realtime-email.aiff 'What if the 2022 email acknowledges the debt?'` then `afconvert -f WAVE -d LEI16@16000 -c 1 .verification/realtime-email.aiff .verification/realtime-email.wav`. Repeat with “Reset the scenario.” and `realtime-reset` filenames. `.verification` must exist first.
 
-Live investigation exposed two issues: the original Small model was rate-limited, and a loosely nullable target schema permitted an invalid null preview target. Those responses were safely rejected; the final per-action schema requires known, non-null qualification IDs for previews. Three subsequent real intent probes passed. In total, 8 short generation calls were used (1 STT, 4 initial intent probes, 3 successful repaired probes), with the additional probes authorized. Upstream request-ID headers were absent, so evidence records null rather than invented IDs.
+Browser reproduction fixture: `scripts/browser-realtime-probe.js` installs **synthetic microphone only**, observing otherwise-real production requests/socket/DOM. Load the sample, evaluate this file in the browser, activate the switch with a **trusted mouse gesture**, wait for “continuously listening”, then invoke `playSyntheticSequence()` once. It schedules both WAVs six seconds apart on the same MediaStream; no per-command click. Inspect `voiceEvidence.receipts`, `voiceEvidence.events` and `voiceEvidence.dom`. Switch OFF and verify `voiceEvidence.contexts.every(c=>c.state==='closed')`. Reload to remove the synthetic fixture before testing a real microphone. No transcript/provider/intent response is fabricated.
 
-Ignored local evidence (not portable in Git):
-- `.verification/live-browser-evidence.json` — real response statuses, transcript, validated actions, engine/DOM before/after and decision invariants, including initial failures.
-- `.verification/provider-receipts.jsonl` — redacted upstream diagnostic receipts.
-- `.verification/mock-browser-evidence.json` — separately labelled mock-only DOM/error/cancel/mode checks and actual 780/1280px panel geometry.
-- `.verification/replay-engine-evidence.json` — explicit offline replay, not a new provider claim.
-- `.verification/generated-command.wav` — synthetic speech only, not user microphone audio.
+Legacy bounded `/api/transcribe` and its opt-in `voice:smoke` remain for compatibility, but are not used or presented as the realtime UX. Historical bounded acceptance files have distinct names and are not proof of this revised requirement.
 
-Recheck the retained real receipts through the actual engine without another provider call: `npm run voice:smoke -- --replay .verification/live-browser-evidence.json`.
+Official references: [Mistral realtime transcription](https://docs.mistral.ai/studio/audio/speech_to_text/realtime_transcription), [official Python connection/protocol](https://github.com/mistralai/client-python/tree/main/src/mistralai/extra/realtime), [official client-session auth](https://docs.mistral.ai/studio/audio/speech_to_text/realtime_transcription/client_auth), [Bun native WS API](https://bun.sh/docs/runtime/http/websockets), [structured output](https://docs.mistral.ai/studio/conversations/structured-output/custom).
 
-For a **new authorized live** probe, generate a short WAV saying “What if the 2022 email acknowledges the debt?”, start the local backend, then run `npm run voice:smoke -- --live /absolute/path/to/command.wav`. This opt-in script makes exactly 3 generation calls: STT, email intent, conciliation intent. It fails on unavailable/invalid provider results and writes `.verification/live-cli-evidence.json`; it does not silently switch to replay. `--help` makes no provider calls. Browser DOM acceptance is separate from CLI replay.
+## Local human acceptance (after automated gates)
 
-Official contracts used: [offline transcription](https://docs.mistral.ai/studio-api/audio/speech_to_text/offline_transcription), [Voxtral Mini Transcribe 2](https://docs.mistral.ai/models/voxtral-mini-transcribe-26-02), [structured output](https://docs.mistral.ai/studio/conversations/structured-output/custom), [chat endpoint](https://docs.mistral.ai/api/endpoint/chat).
+From `/Users/fqn/Documents/HermesAnywhere/HacktheLaw-voice/web`, run `npm run voice:server` in Terminal A and `npm run dev` in Terminal B; use the Bun/Node prerequisites and ignored `.env.local` above. If handed running services, open the URL without starting duplicate listeners.
 
-## Original demo sources and shortcuts
+1. Open http://localhost:5173, load the sample and choose Chains. Do not evaluate synthetic verification fixtures for this human test.
+2. Turn Continuous listening ON with a mouse click, grant permission and wait for “continuously listening”. Speak “What if the 2022 email acknowledges the debt?”, then pause. Expect partial transcript, Heard → Executing → Answered, hypothetical C1 fails / C2 contested.
+3. **Without clicking anything**, speak “Reset the scenario.” and pause. Expect both chains restored, same switch still ON and lawyer decisions unchanged.
+4. Optionally say “Show the mandatory conciliation clause.”; expect actual highlighted art. 14. Ask to confirm all facts; it must refuse without changing decisions.
+5. Turn OFF while another utterance is processing. Expect microphone OFF, no late action, recording indicator gone. Re-enable once to test recovery; OFF again when finished. Typed fallback remains available while OFF.
 
-Sources: the two Cour de cassation decisions in `../data/caselaw/` are real. The case file, statutory excerpts and the Cass. 2e civ. authority for chain C1 are mocks, labelled as such in the UI. These legal references still require lawyer review; the command layer does not certify legal outcomes.
+This checklist is a user handoff, not a claim that a real human microphone has already passed.
 
-Shortcuts: `1`/`2`/`3` modes · `J`/`K` facts · `C`/`R` confirm/reject · `P` presenter mode · `Esc` close drawer.
+## Original sources and shortcuts
 
-Screenshot URLs: `?mode=chains&link=c1-cons`, `?mode=chains&confirmed&whatif=q-email`.
+The two Cour de cassation PDFs in `../data/caselaw/` are real. The sample case, statutory excerpts and C1 Cass. 2e civ. authority are mocks, labelled in the UI. These still require lawyer review. Shortcuts: `1`/`2`/`3` modes · `J`/`K` facts · `C`/`R` confirm/reject · `P` presenter mode · `Esc` close drawer. Text input remains protected from app review shortcuts.
 
-Implementation outline, dependency/parallelism map and acceptance checklist: [VOICE_DEVELOPMENT_PLAN.md](../docs/VOICE_DEVELOPMENT_PLAN.md).
+Voice-specific plan: [VOICE_DEVELOPMENT_PLAN.md](../docs/VOICE_DEVELOPMENT_PLAN.md).

@@ -1,108 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
-import { microphoneError, recordClip, requestJson, createOperationGuard, type Clip } from '../voice/client';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { requestJson } from '../voice/client';
+import { IntentQueue, listenRealtime, type ListenState } from '../voice/realtime';
 import { validateIntent, type Intent, type VoiceContext } from '../voice/contract';
+import type { ReactNode } from 'react';
+export function OffOnlyFallback({listening,children}:{listening:boolean;children:ReactNode}){return listening?null:children;}
 
-const EXAMPLES = [
-  'What if the 2022 email acknowledges the debt?',
-  'Et si la conciliation avait été tentée avant l’assignation ?',
-  'Show evidence for the conciliation clause',
-  'Explain why C1 loses interruption',
-  'Challenge the defence',
-];
-export function VoicePanel({ context, onIntent }: {context: VoiceContext; onIntent:(intent:Intent)=>string}) {
-  const [zh, setZh] = useState(false);
-  const [text, setText] = useState('');
-  const [status, setStatus] = useState('Checking local voice server…');
-  const [configured, setConfigured] = useState(false);
-  const [phase, setPhase] = useState<'idle'|'permission'|'recording'|'transcribing'|'interpreting'>('idle');
-  const [result, setResult] = useState('');
-  const [error, setError] = useState('');
-  const [sources, setSources] = useState<string[]>([]);
-  const active = useRef<Clip | null>(null);
-  const mounted = useRef(true);
-  const guard = useRef(createOperationGuard());
-  const request = useRef<AbortController | null>(null);
-  const busy = phase !== 'idle';
-  const label = (en:string, cn:string)=>zh?cn:en;
-  async function check() {
-    try {
-      const data = await requestJson<{configured:boolean}>('/api/status');
-      if (!mounted.current) return;
-      setError('');
-      setConfigured(data.configured);
-      setStatus(data.configured ? 'Mistral ready · EN / FR / 中文 commands' : 'API key missing · original demo controls remain available');
-    } catch(e) { if(mounted.current) { setConfigured(false); setStatus('Voice API offline'); setError((e as Error).message); } }
-  }
-  useEffect(()=>{
-    const operationGuard = guard.current;
-    mounted.current=true;
-    void requestJson<{configured:boolean}>('/api/status').then(data=>{
-      if (!mounted.current) return;
-      setConfigured(data.configured);
-      setStatus(data.configured ? 'Mistral ready · EN / FR / 中文 commands' : 'API key missing · original demo controls remain available');
-    }).catch(e=>{if(mounted.current) {setStatus('Voice API offline');setError((e as Error).message);}});
-    return ()=>{ mounted.current=false; operationGuard.cancel(); active.current?.cancel(); request.current?.abort(); };
-  },[]);
-  async function record() {
-    const token=guard.current.begin(); const isLive=()=>mounted.current && guard.current.isCurrent(token);
-    setError(''); setResult(''); setSources([]); setPhase('permission');
-    let clip:Clip;
-    try {
-      clip = await recordClip();
-      if (!isLive()) { void clip.result.catch(()=>{}); clip.cancel(); return; }
-      active.current=clip; setPhase('recording');
-    } catch(e) { if(isLive()) { setError(microphoneError(e)); setPhase('idle'); } return; }
-    try {
-      const audio = await clip.result;
-      active.current=null;
-      if(!isLive()) return;
-      setPhase('transcribing'); request.current=new AbortController();
-      const transcript=await requestJson<{text:string}>('/api/transcribe',{method:'POST',headers:{'Content-Type':audio.type},body:audio,signal:request.current.signal});
-      if(isLive()) {setText(transcript.text);setStatus('Transcript ready · review/edit, then apply');}
-    } catch(e) {if(isLive()) setError((e as Error).message);}
-    finally {if(isLive()) setPhase('idle');}
-  }
-  async function submit() {
-    const token=guard.current.begin(); const isLive=()=>mounted.current && guard.current.isCurrent(token);
-    setPhase('interpreting'); setError(''); setResult(''); setSources([]); request.current=new AbortController();
-    try {
-      const data=await requestJson<{intent:unknown}>('/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,context}),signal:request.current.signal});
-      if(!isLive()) return;
-      const intent=validateIntent(data.intent,context);
-      setResult(onIntent(intent));
-      setSources(intent.sourceIds);
-      setStatus(intent.action==='unsupported'?'Unsupported request · no changes':'Command applied · lawyer decisions unchanged');
-    } catch(e) {if(isLive()) setError((e as Error).message);}
-    finally {if(isLive()) setPhase('idle');}
-  }
-  const liveStatus = phase==='recording' ? label('Recording · stops at 15 seconds', '录音中 · 15 秒自动停止')
-    : phase==='permission' ? label('Waiting for microphone permission…','等待麦克风授权…')
-    : phase==='transcribing' ? label('Voxtral is transcribing the clip…','Voxtral 正在转写…')
-    : phase==='interpreting' ? label('Mistral is interpreting your command…','Mistral 正在解析指令…') : status;
-  return <section className="voice-panel" aria-label="Mistral voice command panel">
-    <div className="voice-heading">
-      <strong>{label('Command desk','语音指令台')} <span className="voice-provider mono">MISTRAL / VOXTRAL</span></strong>
-      <span className={`voice-status ${phase==='recording'?'is-recording':''}`} role="status">{liveStatus}</span>
-      <button className="linkish small" onClick={()=>setZh(v=>!v)} aria-label="Change command panel language">{zh?'English':'中文'}</button>
-      <button className="linkish small" onClick={()=>void check()} disabled={busy}>{label('Check connection','检查连接')}</button>
-    </div>
-    <form className="voice-input" onSubmit={e=>{e.preventDefault();void submit();}}>
-      <button type="button" className={`btn ${phase==='recording'?'danger':''}`} disabled={!configured || (busy && phase!=='recording')}
-        onClick={()=>phase==='recording'?active.current?.stop():void record()}>
-        {phase==='recording'?label('Stop recording','停止录音'):label('Start recording','开始录音')}
-      </button>
-      <button type="button" className="btn" disabled={!busy} onClick={()=>{guard.current.cancel();active.current?.cancel();active.current=null;request.current?.abort();setPhase('idle');setStatus('Cancelled · no changes made');setError('');}}>{label('Cancel','取消')}</button>
-      <textarea aria-label="Voice command" rows={1} value={text} maxLength={2000} disabled={busy}
-        onChange={e=>setText(e.target.value)} placeholder={label('Speak, then review — or type a command in EN / FR / 中文','录音后审核转写，或直接输入中文 / EN / FR 指令')} />
-      <button type="submit" className="btn primary" disabled={!text.trim() || busy || !configured}>{label('Apply command','执行指令')}</button>
-      <button type="button" className="btn" disabled={busy} onClick={()=>{setResult(onIntent({action:'reset_scenario',target:null,value:null,sourceIds:[]}));setSources([]);setError('');}}>{label('Restore scenario','恢复情景')}</button>
-    </form>
-    <details className="voice-help"><summary>{label('Try a command · privacy & safety','指令示例 · 隐私与安全')}</summary>
-      <div className="voice-examples">{EXAMPLES.map(example=><button key={example} type="button" className="chip" disabled={busy} onClick={()=>setText(example)}>{example}</button>)}</div>
-      <p>{label('Click Start recording to allow microphone access. A clip (max 15 s / 4 MB), its transcript and demo context are sent via your local server to Mistral. Transcription appears after Stop, not as a live stream. Review/edit before Apply. Do not use confidential client data.','点击开始录音后才申请麦克风权限。最多 15 秒 / 4 MB 的录音、转写和演示上下文经本地服务发送至 Mistral；停止录音后显示转写，并非实时流。执行前可审核编辑，请勿输入保密客户信息。')}</p>
-      <p>{label('Previews are hypothetical only; voice never confirms/rejects legal facts. Explanations come from the deterministic demo engine. Sources retain real/mock labels.','预览仅为假设；语音不能确认或否定法律事实。解释来自确定性演示引擎，来源保留真实 / 模拟标记。')}</p>
-    </details>
-    {error && <p className="voice-error" role="alert">{error}</p>}
-    {result && <div className="voice-result" aria-live="polite"><p>{result}</p>{sources.length>0 && <div className="chips">{sources.map(id=><button key={id} className="chip" onClick={()=>onIntent({action:'show_evidence',target:id,value:null,sourceIds:[id]})}>{id} · {context.sources.find(s=>s.id===id)?.provenance}</button>)}</div>}</div>}
-  </section>;
+
+const EXAMPLES = ['What if the 2022 email acknowledges the debt?', 'Et si la conciliation avait été tentée avant l’assignation ?', 'Show evidence for the conciliation clause', 'Reset the scenario'];
+export function VoicePanel({ context, onIntent }: {context:VoiceContext;onIntent:(intent:Intent)=>string}) {
+ const [zh,setZh]=useState(false),[text,setText]=useState(''),[partial,setPartial]=useState('');
+ const [configured,setConfigured]=useState(false),[connection,setConnection]=useState('Checking local voice server…');
+ const [listening,setListening]=useState(false),[state,setState]=useState<ListenState>('off');
+ const [activity,setActivity]=useState('Ready'),[heard,setHeard]=useState(''),[result,setResult]=useState(''),[error,setError]=useState(''),[sources,setSources]=useState<string[]>([]),[busy,setBusy]=useState(false);
+ const mounted=useRef(true),latest=useRef({context,onIntent});
+ useLayoutEffect(()=>{latest.current={context,onIntent};},[context,onIntent]);
+ const live=useRef<{stop:()=>void}|null>(null),queue=useRef<IntentQueue<Intent>|null>(null);
+ const label=(en:string,cn:string)=>zh?cn:en;
+ async function check(){try{const data=await requestJson<{configured:boolean}>('/api/status');if(!mounted.current)return;setConfigured(data.configured);setConnection(data.configured?'Mistral realtime ready · EN / FR / 中文':'API key missing · typed/manual demo controls remain available');setError('');}catch(e){if(mounted.current){setConfigured(false);setConnection('Voice API offline');setError((e as Error).message);}}}
+ useEffect(()=>{mounted.current=true;void Promise.resolve().then(()=>check());return()=>{mounted.current=false;queue.current?.cancel();live.current?.stop();};},[]);
+ function cancel(){queue.current?.cancel();queue.current=null;live.current?.stop();live.current=null;setListening(false);setState('off');setBusy(false);setPartial('');setActivity('Cancelled · pending commands discarded');}
+ function newQueue(){
+  queue.current?.cancel();
+  const q=new IntentQueue<Intent>(async(command,signal)=>{
+   const snapshot=latest.current.context;
+   const data=await requestJson<{intent:unknown}>('/api/intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:command,context:snapshot}),signal:AbortSignal.any([signal,AbortSignal.timeout(40_000)])});
+   return validateIntent(data.intent,snapshot);
+  },intent=>{if(!mounted.current)return;flushSync(()=>{setResult(latest.current.onIntent(intent));setSources(intent.sourceIds);setError('');});},e=>{if(mounted.current){setError((e as Error).message);setActivity('Command failed · no changes');setBusy(false);}},(phase,command)=>{if(mounted.current){setHeard(command);setActivity(phase==='executing'?'Executing · Mistral intent':'Answered · lawyer decisions unchanged');setBusy(phase==='executing');}});
+  queue.current=q;return q;
+ }
+ function toggle(){
+  if(listening){cancel();return;}setError('');setListening(true);setActivity('Waiting for speech');const q=newQueue();
+  live.current=listenRealtime({onState:s=>{if(!mounted.current)return;setState(s);if(s==='failed'){q.cancel();setListening(false);setBusy(false);}},onPartial:value=>{if(mounted.current)setPartial(value);},onUtterance:command=>{if(!mounted.current)return;setHeard(command);setActivity('Heard · endpoint detected');q.push(command);},onError:value=>{if(mounted.current)setError(value);}});
+ }
+ function submit(){if(!text.trim()||listening||busy)return;setError('');newQueue().push(text.trim());}
+ const status=state==='permission'?'Microphone ON · awaiting permission':state==='connecting'?'Microphone ON · connecting realtime':state==='listening'?'Microphone ON · continuously listening':state==='reconnecting'?'Microphone ON · reconnecting (speech not sent)':state==='failed'?'Microphone OFF · failed':`Microphone OFF · ${connection}`;
+ return <section className="voice-panel" aria-label="Mistral voice command panel">
+  <div className="voice-heading"><strong>{label('Command desk','语音指令台')} <span className="voice-provider mono">MISTRAL / VOXTRAL REALTIME</span></strong><span className={`voice-status ${listening?'is-recording':''}`} role="status">{status}</span><button className="linkish small" onClick={()=>setZh(v=>!v)} aria-label="Change command panel language">{zh?'English':'中文'}</button><button className="linkish small" disabled={listening||busy} onClick={()=>void check()}>{label('Check connection','检查连接')}</button></div>
+  <div className="voice-input"><button type="button" role="switch" aria-label="Continuous listening" aria-checked={listening} className={`btn ${listening?'danger':'primary'}`} disabled={!configured&&!listening} onClick={toggle}>{label('Continuous listening','持续聆听')} · {listening?'ON':'OFF'}</button><button className="btn" type="button" disabled={!listening&&!busy} onClick={cancel}>{label('Cancel','取消')}</button><span className="voice-provider">{label('Pause to execute automatically · no Apply needed','停顿后自动执行 · 无需手动确认')}</span></div>
+  <div className="voice-live" aria-live="polite"><div><strong>{label('Partial transcript','实时转写')}</strong>: <span data-testid="voice-partial">{partial||'—'}</span></div><div><strong>{label('Heard','已听到')}</strong>: <span data-testid="voice-heard">{heard||'—'}</span></div><div data-testid="voice-activity">{activity}</div></div>
+  <OffOnlyFallback listening={listening}><form className="voice-input" onSubmit={e=>{e.preventDefault();submit();}}><textarea aria-label="Voice command" rows={1} value={text} maxLength={2000} disabled={listening||busy} onChange={e=>setText(e.target.value)} placeholder={label('Typed fallback · turn listening OFF to type','文字备用 · 关闭聆听后输入')} /><button type="submit" className="btn" disabled={!text.trim()||listening||busy||!configured}>{label('Send typed command','发送文字指令')}</button><button type="button" className="btn" disabled={busy} onClick={()=>{setResult(onIntent({action:'reset_scenario',target:null,value:null,sourceIds:[]}));setSources([]);}}>{label('Restore scenario','恢复情景')}</button></form></OffOnlyFallback>
+  <details className="voice-help"><summary>{label('Try a command · privacy & safety','指令示例 · 隐私与安全')}</summary><div className="voice-examples">{EXAMPLES.map(example=><button key={example} type="button" className="chip" disabled={listening||busy} onClick={()=>setText(example)}>{example}</button>)}</div><p>{label('Turn ON to stream microphone PCM continuously through your local server to Mistral realtime. Pause after a complete command: navigation, explanations and hypothetical previews execute automatically. OFF immediately releases the microphone and discards pending commands. No audio uploads or TTS feedback. Do not use confidential client data.','打开后，麦克风 PCM 音频经本地服务持续流向 Mistral 实时转写。完整指令后停顿，导航、解释和假设预览自动执行。关闭立即释放麦克风并丢弃待处理指令。请勿使用保密客户信息。')}</p><p>{label('Previews are hypothetical only; voice never confirms/rejects legal facts. Explanations come from the deterministic demo engine. Sources retain real/mock labels.','预览仅为假设；语音不能确认或否定法律事实。解释来自确定性演示引擎，来源保留真实 / 模拟标记。')}</p></details>
+  {error&&<p className="voice-error" role="alert">{error}</p>}{result&&<div className="voice-result" aria-live="polite"><p>{result}</p>{sources.length>0&&<div className="chips">{sources.map(id=><button key={id} className="chip" onClick={()=>onIntent({action:'show_evidence',target:id,value:null,sourceIds:[id]})}>{id} · {context.sources.find(s=>s.id===id)?.provenance}</button>)}</div>}</div>}
+ </section>;
 }

@@ -1,5 +1,29 @@
 # Domino Mistral Voice Interaction Implementation Plan
 
+## Revised acceptance: continuous realtime (supersedes bounded-clip milestones below)
+
+- Primary control is a persistent ON/OFF listening switch. ON continuously streams mono PCM through an authenticated server WebSocket bridge to `voxtral-mini-transcribe-realtime-2602`; no chunk-upload substitute, manual Stop, or per-utterance Apply.
+- Research the official Mistral realtime protocol first. AudioWorklet capture/resampling, visible partial transcripts, acoustic silence plus transcript stabilization endpointing, serialized `/api/intent` calls, and safe automatic execution are mandatory.
+- Only navigation, grounded read-only explanations and hypothetical previews/reset may execute. Confirmed legal decisions remain untouched; unsupported and ungrounded requests fail closed. Typed fallback remains available.
+- OFF/unmount cancels microphone acquisition, tracks, AudioContext, socket/reconnect timers, intent queue and pending fetch; late responses cannot execute. Reconnection is bounded and never silently discards microphone status.
+- TDD gates: endpointing/debounce/silence, ordering, repetition, cancellation/late results, permission denial, bounded reconnect, grounding and decision invariants; preserve the existing 41-test baseline.
+- Live acceptance requires actual provider WebSocket PCM streaming, partial transcript, automatic Mistral intent and engine/DOM changes for at least two sequential spoken commands in one ON session with no click between them. Label generated browser audio synthetic; human microphone verification remains separate.
+- Preserve sanitized RED/GREEN and live browser evidence under ignored `.verification`; full tests, build, lint and server typecheck; local feature-branch commit only. No push, merge or deploy.
+
+The original bounded recording delivery below is historical evidence, not acceptance of this revised requirement.
+
+### Revised completion evidence
+
+- [x] Official realtime WS model/protocol researched and exercised; native Bun 1.3.13 bridge keeps credentials server-only without any new installed npm dependency.
+- [x] Persistent AudioWorklet PCM16/16 kHz stream, partial transcript, acoustic + transcript endpointing, automatically serialized intents and safe engine execution.
+- [x] Final actual-provider browser session: one ON click, two spoken commands, zero intervening/typed-submit clicks, one OFF click. Email changes C1 only; reset restores baseline; one socket; typed controls absent ON and return OFF.
+- [x] OFF drops deliberately delayed real intent response and closes tracks/context/socket. Server aborts upstream HTTP work on client disconnect.
+- [x] Queued-context browser regression observed RED (second request stale hypothetical=false) and GREEN (fresh hypothetical=true) using explicitly mocked transport; repaired React commit/ref synchronization.
+- [x] Silence/pending permission/denial/initialization/reconnect/order/grounding/decision invariants have regression coverage; 65 tests in 10 files, preserving original 41 tests.
+- [x] Reproducible runtime/startup, ignored env loading, local URLs and human ON/OFF checklist are in web/README.md. Human microphone acceptance is still separate, never claimed.
+- [x] Real evidence: web/.verification/realtime-browser-final-evidence.json (final UI/provider), realtime-browser-evidence.json (OFF race), realtime-provider-evidence.json (protocol/engine).
+- [ ] Parent independently verifies local feature commit and combines the separately owned C3–C5 lane. Realtime layer uses abstract /api/intent; current legal ID/context allowlists remain C1/C2 until that integration.
+
 > **For Hermes:** Implement task-by-task with test-driven-development and subagent-driven-development; require specification review and code-quality review before acceptance.
 
 **Goal:** Add verifiable voice-driven evidence navigation and hypothetical procedural-chain evaluation to the teammate's existing Domino demo without changing confirmed legal facts or its deployed branch.
