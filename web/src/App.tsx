@@ -6,7 +6,7 @@ import type { Anchor, CaseBundle } from './data/bundle';
 import { PRESETS, getCase, type CaseId } from './data/catalog';
 import { createCaseSession, type CaseSession } from './data/caseSession';
 import { adoptInterpretation, analyse, counterfactuals, value, type AnalysisState, type Decision, type ReviewEntry } from './engine/chains';
-import { restoreReviews, reviewStorageKey, serializeReviews } from './engine/reviewStorage';
+import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './engine/reviewStorage';
 import { daysBetween, long } from './engine/dates';
 import { useLocale } from './i18n/useLocale';
 import { ChainsView } from './components/Chains';
@@ -130,6 +130,11 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
     try { localStorage.setItem(reviewStorageKey(bundle), serializeReviews(bundle, next)); setReviewStorageFailed(false); }
     catch { setReviewStorageFailed(true); }
   }, [bundle, state.whatIf]);
+  const resetReviewState = useCallback(() => {
+    if (!window.confirm(t('Reset all lawyer reviews for this case?'))) return;
+    setState((current) => resetReviews(bundle, current));
+    try { localStorage.removeItem(reviewStorageKey(bundle)); setReviewStorageFailed(false); } catch { /* ignore */ }
+  }, [bundle, t]);
   const decide = useCallback((qid: string, decision: Decision) => saveReviewState({ ...state, decisions: { ...state.decisions, [qid]: decision } }), [state, saveReviewState]);
   const adopt = (qid: string, interpretation: boolean, review: ReviewEntry) => saveReviewState(adoptInterpretation(bundle, state, qid, interpretation, review));
   const saveReview = (qid: string, review: ReviewEntry) => saveReviewState({ ...state, reviews: { ...state.reviews, [qid]: review } });
@@ -267,6 +272,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
         {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) to verify', { count: pendingReviews })}</span>}
+        {hasReviews(state) && <span className="banner-secondary"><button className="linkish" onClick={resetReviewState}>{t('Reset reviews')}</button></span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>
 
