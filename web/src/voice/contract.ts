@@ -9,6 +9,7 @@ export type VoiceContext = {
   caseId: CaseId;
   hypothetical: boolean;
   decisions: Record<string, string>;
+  interpretations?: Record<string, boolean>;
   whatIf: Record<string, boolean>;
   qualifications: Qualification[];
   chains: ChainResult[];
@@ -27,13 +28,16 @@ export function validateCaseContext(raw: unknown): VoiceContext {
       || !Array.isArray(context.qualifications) || !Array.isArray(context.chains) || !Array.isArray(context.sources)) return invalid();
     const ids = bundle.qualifications.map((qualification) => qualification.id);
     if (Object.keys(context.decisions).length !== ids.length
-      || !ids.every((id) => ['proposed', 'confirmed', 'rejected'].includes(context.decisions[id]))) return invalid();
+      || !ids.every((id) => ['proposed', 'confirmed', 'rejected', 'pending'].includes(context.decisions[id]))) return invalid();
     if (!Object.entries(context.whatIf).every(([id, value]) => ids.includes(id) && typeof value === 'boolean')
       || context.hypothetical !== Boolean(Object.keys(context.whatIf).length)) return invalid();
     if (JSON.stringify(context.qualifications) !== JSON.stringify(bundle.qualifications)) return invalid();
     const sources = bundle.docs.map(({ id, title, provenance }) => ({ id, title, provenance }));
     if (JSON.stringify(context.sources) !== JSON.stringify(sources)) return invalid();
-    const state: AnalysisState = { decisions: context.decisions as AnalysisState['decisions'], whatIf: context.whatIf, art642: true };
+    const interpretations = context.interpretations ?? {};
+    if (typeof interpretations !== 'object' || Array.isArray(interpretations)
+      || !Object.entries(interpretations).every(([id, value]) => ids.includes(id) && typeof value === 'boolean')) return invalid();
+    const state: AnalysisState = { ...initialState(bundle), decisions: context.decisions as AnalysisState['decisions'], interpretations, whatIf: context.whatIf, art642: true };
     const canonical = analyse(bundle, state).chains;
     const alternate = analyse(bundle, { ...state, art642: false }).chains;
     if (JSON.stringify(context.chains) !== JSON.stringify(canonical) && JSON.stringify(context.chains) !== JSON.stringify(alternate)) return invalid();

@@ -13,6 +13,7 @@ export function buildContext(state: AnalysisState, bundle: CaseBundle): VoiceCon
     whatIf: { ...state.whatIf },
     hypothetical: Object.keys(state.whatIf).length > 0,
     decisions: { ...state.decisions },
+    interpretations: { ...state.interpretations },
     qualifications: bundle.qualifications,
     chains: analyse(bundle, state).chains,
     sources: allDocs(bundle).map(({ id, title, provenance }) => ({ id, title, provenance })),

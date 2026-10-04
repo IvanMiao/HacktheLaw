@@ -5,23 +5,28 @@ import { addDays, daysBetween, fr } from './dates.js';
 import { computeLimitation, type LimitationEvent, type LimitationResult } from './limitation.js';
 import type { RegimeKey } from './regimes.js';
 
-export type Decision = 'proposed' | 'confirmed' | 'rejected';
+export type Decision = 'proposed' | 'confirmed' | 'rejected' | 'pending';
+export type ReviewEntry = { note: string; nextStep: string };
 
 export type AnalysisState = {
   decisions: Record<string, Decision>;
+  interpretations: Record<string, boolean>;
+  reviews: Record<string, ReviewEntry>;
   whatIf: Record<string, boolean>;
   art642: boolean;
 };
 
 export const initialState = (bundle: CaseBundle): AnalysisState => ({
   decisions: Object.fromEntries(bundle.qualifications.map((q) => [q.id, 'proposed' as Decision])),
+  interpretations: {},
+  reviews: {},
   whatIf: {},
   art642: true,
 });
 
 export type NodeKind = 'fact' | 'requirement' | 'breach' | 'sanction' | 'lost_effect' | 'consequence' | 'outcome';
-export type LinkStatus = 'established' | 'contested' | 'broken' | 'not_reached';
-export type ChainStatus = 'holds' | 'contested' | 'fails' | 'not_applicable';
+export type LinkStatus = 'established' | 'contested' | 'broken' | 'not_reached' | 'pending';
+export type ChainStatus = 'holds' | 'contested' | 'fails' | 'not_applicable' | 'pending';
 
 export type Link = {
   id: string;
@@ -129,13 +134,24 @@ export function deriveCase(bundle: CaseBundle): DerivedCase {
 
 export function value(bundle: CaseBundle, state: AnalysisState, qid: string): boolean {
   if (qid in state.whatIf) return state.whatIf[qid];
+  if (qid in state.interpretations) return state.interpretations[qid];
   const q = qualOf(bundle, qid);
   return state.decisions[qid] === 'rejected' ? !q.proposed : q.proposed;
 }
 
 export function isContested(bundle: CaseBundle, state: AnalysisState, qid: string): boolean {
   const q = qualOf(bundle, qid);
-  return q.source === 'ai_inferred' && state.decisions[qid] === 'proposed' && !(qid in state.whatIf);
+  return !(qid in state.whatIf) && (state.decisions[qid] === 'pending' || (q.source === 'ai_inferred' && state.decisions[qid] === 'proposed'));
+}
+
+export function adoptInterpretation(bundle: CaseBundle, state: AnalysisState, qid: string, interpretation: boolean, review?: ReviewEntry): AnalysisState {
+  if (Object.keys(state.whatIf).length || !bundle.qualifications.some((q) => q.id === qid)) return state;
+  return {
+    ...state,
+    decisions: { ...state.decisions, [qid]: 'confirmed' },
+    interpretations: { ...state.interpretations, [qid]: interpretation },
+    reviews: review ? { ...state.reviews, [qid]: review } : state.reviews,
+  };
 }
 
 export function limitationFor(bundle: CaseBundle, state: AnalysisState, t: Translator = english): LimitationResult | null {
@@ -184,6 +200,10 @@ function settle(defs: LinkDef[], ctx: Ctx): Link[] {
   let broken = false;
   return defs.map(({ holds, brokenReason, ...link }) => {
     if (broken) return { ...link, status: 'not_reached' };
+    if (link.deps.some((qid) => ctx.state.decisions[qid] === 'pending' && !(qid in ctx.state.whatIf))) {
+      broken = true;
+      return { ...link, status: 'pending' };
+    }
     if (!holds) { broken = true; return { ...link, status: 'broken', brokenReason }; }
     return { ...link, status: link.deps.some(ctx.isContested) ? 'contested' : 'established' };
   });
@@ -264,13 +284,14 @@ function c2(ctx: Ctx): LinkDef[] {
     { id: 'c2-out', kind: 'outcome', title: t('Claim inadmissible'), statement: lim
       ? timeBarred ? t('Re-filing after conciliation: already time-barred ({date})', { date: fr(lim.expiry) }) : t('Re-filing possible until {date}', { date: fr(lim.expiry) })
       : t('Claim inadmissible'),
-      rule: t('art. 122 CPC'), anchors: [{ doc: 'cpc', quote: 'Constitue une fin de non-recevoir' }], deps: [], holds: true },
+      rule: t('art. 122 CPC'), anchors: [{ doc: 'cpc', quote: 'Constitue une fin de non-recevoir' }],
+      deps: [...derived.acks, ...derived.notices].map(({ qualification }) => qualification.id).concat(derived.writOutcomeQ ? [derived.writOutcomeQ.id] : []), holds: true },
   ];
 }
 
 function chainResult(id: string, title: string, subtitle: string, outcome: string, links: Link[]): ChainResult {
-  const status: ChainStatus = links.some((link) => link.status === 'broken') ? 'fails' : links.some((link) => link.status === 'contested') ? 'contested' : 'holds';
-  const hingesOn = [...new Set(links.flatMap((link) => link.status === 'contested' ? link.deps : []))];
+  const status: ChainStatus = links.some((link) => link.status === 'pending') ? 'pending' : links.some((link) => link.status === 'broken') ? 'fails' : links.some((link) => link.status === 'contested') ? 'contested' : 'holds';
+  const hingesOn = [...new Set(links.flatMap((link) => link.status === 'contested' || link.status === 'pending' ? link.deps : []))];
   return { id, title, subtitle, links, status, outcome, hingesOn };
 }
 
@@ -326,6 +347,6 @@ export function counterfactuals(bundle: CaseBundle, state: AnalysisState, t: Tra
     const effects = alt.chains
       .map((chain, i) => ({ chain: chain.id, from: base.chains[i].status, to: chain.status }))
       .filter((effect) => effect.from !== 'not_applicable' && effect.to !== 'not_applicable' && (effect.from === 'fails') !== (effect.to === 'fails'));
-    return { qid: q.id, label: t(q.whatIfLabel), flipsTo, active: q.id in state.whatIf, effects };
+    return { qid: q.id, label: flipsTo === !q.proposed ? t(q.whatIfLabel) : t(flipsTo ? q.yes : q.no), flipsTo, active: q.id in state.whatIf, effects };
   });
 }
