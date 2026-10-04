@@ -1,4 +1,4 @@
 {
   "compilerOptions": { "target": "es2023", "lib": ["ES2023", "DOM"], "module": "esnext", "moduleResolution": "bundler", "types": ["node", "vite/client"], "allowImportingTsExtensions": true, "resolveJsonModule": true, "noEmit": true, "strict": true, "skipLibCheck": true, "erasableSyntaxOnly": true },
-  "include": ["server/api.ts", "server/index.ts", "server/integrations/**/*.ts", "scripts/dev-integrations.ts", "scripts/create-firm-fixture.ts", "scripts/integration-smoke.ts", "scripts/verify-integration-stage.ts"]
+  "include": ["server/api.ts", "server/index.ts", "server/worker.ts", "server/worker-data.d.ts", "server/integrations/**/*.ts", "scripts/dev-integrations.ts", "scripts/create-firm-fixture.ts", "scripts/integration-smoke.ts", "scripts/verify-integration-stage.ts"]
 }

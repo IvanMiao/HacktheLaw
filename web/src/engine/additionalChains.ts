@@ -13,15 +13,16 @@ export function analyseAdditional(bundle: CaseBundle, state: AnalysisState, t: T
   const chain = (id:string, title:string, subtitle:string, outcome:string, definitions:Definition[]): ChainResult => {
     let broken = false;
     const links:Link[] = definitions.map(d => {
-      const status = broken ? 'not_reached' : d.holds === false ? 'broken' : (d.deps ?? []).some(contested) ? 'contested' : 'established';
-      if (status === 'broken') broken = true;
+      const pending = (d.deps ?? []).some(qid => state.decisions[qid] === 'pending' && !(qid in state.whatIf));
+      const status = broken ? 'not_reached' : pending ? 'pending' : d.holds === false ? 'broken' : (d.deps ?? []).some(contested) ? 'contested' : 'established';
+      if (status === 'broken' || status === 'pending') broken = true;
       return {id:d.id, kind:d.kind, title:t(d.title), statement:t(d.statement), rule:d.rule, regime:d.regime,
         anchors:d.fact ? factOf(bundle, d.fact).anchors : [], deps:d.deps ?? [], status,
         brokenReason:d.brokenReason ? t(d.brokenReason) : undefined};
     });
     return {id, title:t(title), subtitle:t(subtitle), outcome:t(outcome), links,
-      status:links.some(l => l.status === 'broken') ? 'fails' : links.some(l => l.status === 'contested') ? 'contested' : 'holds',
-      hingesOn:[...new Set(links.filter(l => l.status === 'contested').flatMap(l => l.deps))]};
+      status:links.some(l => l.status === 'pending') ? 'pending' : links.some(l => l.status === 'broken') ? 'fails' : links.some(l => l.status === 'contested') ? 'contested' : 'holds',
+      hingesOn:[...new Set(links.filter(l => l.status === 'contested' || l.status === 'pending').flatMap(l => l.deps))]};
   };
   let chains:ChainResult[] = []; let notices:string[] = []; let timeline:{label:string;date:string}[] = [];
   if (bundle.preset === 'c3') {

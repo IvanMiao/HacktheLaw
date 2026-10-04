@@ -5,7 +5,8 @@ import { SAMPLE } from './data/sample';
 import type { Anchor, CaseBundle } from './data/bundle';
 import { PRESETS, getCase, type CaseId } from './data/catalog';
 import { createCaseSession, type CaseSession } from './data/caseSession';
-import { analyse, counterfactuals, initialState, type AnalysisState, type Decision } from './engine/chains';
+import { adoptInterpretation, analyse, counterfactuals, value, type AnalysisState, type Decision, type ReviewEntry } from './engine/chains';
+import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './engine/reviewStorage';
 import { daysBetween, long } from './engine/dates';
 import { useLocale } from './i18n/useLocale';
 import { ChainsView } from './components/Chains';
@@ -70,21 +71,24 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   onClearFallback: () => void;
   activeCase: CaseSession;
 }) {
-  const { bundle, docs, factOf, qualOf } = useBundle();
+  const { bundle, docs, factOf } = useBundle();
   const caseToken = activeCase.identity();
   const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
   const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode || initialReady ? 'ready' : 'start');
-  const currentStage = initialReady ? 'ready' : stage;
+  const [home, setHome] = useState(false);
+  const currentStage = initialReady && !home ? 'ready' : stage;
   const [startError, setStartError] = useState('');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
   const [state, setState] = useState<AnalysisState>(() => {
-    const next = initialState(bundle);
+    let saved = null;
+    try { saved = localStorage.getItem(reviewStorageKey(bundle)); } catch { /* Continue with session-only reviews. */ }
+    const next = restoreReviews(bundle, saved);
     if (params.has('confirmed')) next.decisions = Object.fromEntries(Object.keys(next.decisions).map((key) => [key, 'confirmed']));
     const whatIf = params.get('whatif');
     if (whatIf && bundle.qualifications.some((qualification) => qualification.id === whatIf)) {
-      next.whatIf = { [whatIf]: !qualOf(whatIf).proposed };
+      next.whatIf = { [whatIf]: !value(bundle, next, whatIf) };
     }
     return next;
   });
@@ -98,6 +102,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   const [viewerOpen, setViewerOpen] = useState(true);
   const [presenter, setPresenter] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
+  const [reviewStorageFailed, setReviewStorageFailed] = useState(false);
 
   const analysis = useMemo(() => analyse(bundle, state, t), [bundle, state, t]);
   const cfs = useMemo(() => counterfactuals(bundle, state, t), [bundle, state, t]);
@@ -128,9 +133,20 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   }, [analysis, bundle.facts]);
 
   const showAnchor = useCallback((item: Anchor) => { setDocId(item.doc); setAnchor({ ...item }); setViewerOpen(true); }, []);
-  const decide = useCallback((qid: string, decision: Decision) => setState((current) => ({
-    ...current, decisions: { ...current.decisions, [qid]: decision },
-  })), []);
+  const saveReviewState = useCallback((next: AnalysisState) => {
+    if (Object.keys(state.whatIf).length) return;
+    setState(next);
+    try { localStorage.setItem(reviewStorageKey(bundle), serializeReviews(bundle, next)); setReviewStorageFailed(false); }
+    catch { setReviewStorageFailed(true); }
+  }, [bundle, state.whatIf]);
+  const resetReviewState = useCallback(() => {
+    if (!window.confirm(t('Reset all lawyer reviews for this case?'))) return;
+    setState((current) => resetReviews(bundle, current));
+    try { localStorage.removeItem(reviewStorageKey(bundle)); setReviewStorageFailed(false); } catch { /* ignore */ }
+  }, [bundle, t]);
+  const decide = useCallback((qid: string, decision: Decision) => saveReviewState({ ...state, decisions: { ...state.decisions, [qid]: decision } }), [state, saveReviewState]);
+  const adopt = (qid: string, interpretation: boolean, review: ReviewEntry) => saveReviewState(adoptInterpretation(bundle, state, qid, interpretation, review));
+  const saveReview = (qid: string, review: ReviewEntry) => saveReviewState({ ...state, reviews: { ...state.reviews, [qid]: review } });
   const toggleWhatIf = (qid: string, nextValue: boolean) => setState((current) => {
     const whatIf = { ...current.whatIf };
     if (qid in whatIf) delete whatIf[qid]; else whatIf[qid] = nextValue;
@@ -179,21 +195,17 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.metaKey || event.ctrlKey) return;
       const index = bundle.facts.findIndex((fact) => fact.id === factId);
       if (index < 0) return;
-      const fact = bundle.facts[index];
-      const qid = fact.qualification;
       if (event.key === '1') setMode('facts');
       else if (event.key === '2') setMode('chains');
       else if (event.key === '3') setMode('memo');
       else if (event.key === 'j') selectFact(bundle.facts[Math.min(index + 1, bundle.facts.length - 1)].id);
       else if (event.key === 'k') selectFact(bundle.facts[Math.max(index - 1, 0)].id);
-      else if (event.key === 'c' && qid && mode === 'facts') decide(qid, 'confirmed');
-      else if (event.key === 'r' && qid && mode === 'facts') decide(qid, 'rejected');
       else if (event.key === 'p') setPresenter((current) => !current);
       else if (event.key === 'Escape') { setLinkId(null); setTraceOpen(false); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [currentStage, factId, mode, decide, selectFact, bundle.facts]);
+  }, [currentStage, factId, selectFact, bundle.facts]);
 
   useEffect(() => { document.documentElement.classList.toggle('presenter', presenter); }, [presenter]);
 
@@ -202,11 +214,11 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       loading={currentStage === 'loading'}
       error={startError}
       onLoad={() => { onClearFallback(); setStartError(''); setStage('loading'); }}
-      onDone={() => { setStage('ready'); onLoaded(); }}
+      onDone={() => { setStage('ready'); setHome(false); onLoaded(); }}
       onError={(message) => { setStartError(message); setStage('start'); }}
       onBundle={onBundle}
       onFallback={onFallback}
-      onReference={() => { setStartError(''); onClearFallback(); onBundle(SAMPLE); }}
+      onReference={() => { setStartError(''); onClearFallback(); setStage('ready'); setHome(false); onBundle(SAMPLE); }}
     />;
   }
 
@@ -215,12 +227,13 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   const contestedLinks = analysis.chains.flatMap((chain) => chain.links).filter((link) => link.status === 'contested').length;
   const pendingAi = bundle.qualifications.filter((qualification) => qualification.source === 'ai_inferred' && state.decisions[qualification.id] === 'proposed').length;
   const whatIf = Object.keys(state.whatIf).length > 0;
+  const pendingReviews = whatIf ? 0 : bundle.qualifications.filter((q) => state.decisions[q.id] === 'pending').length;
   const fact = bundle.facts.find((item) => item.id === factId) ?? bundle.facts[0];
 
   return (
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
-        <div className="brand"><Logo /><span>Domino</span></div>
+        <button type="button" className="brand" title={t('Back to upload')} aria-label={t('Back to upload')} onClick={() => { setStartError(''); setStage('start'); setHome(true); }}><Logo /><span>Domino</span></button>
         <div className="case-name">
             <select aria-label={t('Case')} value={selectedCaseId} onChange={(event) => {
             const selected = event.target.value;
@@ -264,9 +277,11 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
         <strong>{bundle.preset
           ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
           : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
-          : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
+          : pendingReviews > 0 ? t('Grounds awaiting verification') : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
         {pendingAi > 0 ? <span className="banner-secondary b-prov">{isFirmImport(bundle) ? (locale === 'fr' ? `${pendingAi} propositions importées à valider` : `${pendingAi} imported proposals pending review`) : t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
+        {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) to verify', { count: pendingReviews })}</span>}
+        {hasReviews(state) && <span className="banner-secondary"><button className="linkish" onClick={resetReviewState}>{t('Reset reviews')}</button></span>}
         {whatIf && <span className="banner-secondary b-whatif">{t('What-if scenario')} <button className="linkish" onClick={() => setState((current) => ({ ...current, whatIf: {} }))}>{t('reset')}</button></span>}
       </div>
 
@@ -276,7 +291,8 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       <div className="body">
         {mode !== 'chains' && <aside className="col left"><FactList state={state} selected={factId} onSelect={(id) => { selectFact(id); if (mode !== 'facts') setMode('facts'); }} /></aside>}
         <main className="col center">
-          {mode === 'facts' && fact && <FactDetail fact={fact} state={state} analysis={analysis} cfs={cfs} onDecide={decide} onAnchor={showAnchor} onOpenLink={openLink} />}
+          {mode === 'facts' && reviewStorageFailed && <p className="callout amber" role="alert">{t('Review kept in this session only. Copy the memo to keep a record.')}</p>}
+          {mode === 'facts' && fact && <FactDetail fact={fact} state={state} analysis={analysis} onDecide={decide} onAnchor={showAnchor} onOpenLink={openLink} onAdopt={adopt} onSaveReview={saveReview} />}
           {mode === 'chains' && (
             <ChainsView analysis={analysis} cfs={cfs} state={state} linkId={linkId} onLink={openLink} onWhatIf={toggleWhatIf}
               on642={() => setState((current) => ({ ...current, art642: !current.art642 }))} onReset={() => setState((current) => ({ ...current, whatIf: {} }))} onAnchor={showAnchor} />

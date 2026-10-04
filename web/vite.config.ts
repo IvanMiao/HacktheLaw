@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), dominoApi()],
     server: {
       fs: { allow: ['..'] },
-      allowedHosts: ['localhost', '127.0.0.1'],
+      allowedHosts: true,
       proxy: {
         '/api/realtime': { target: `http://127.0.0.1:${process.env.VOICE_REALTIME_PORT ?? 8788}`, ws: true },
         '/api/intent': `http://127.0.0.1:${process.env.VOICE_PORT ?? 8787}`,

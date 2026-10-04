@@ -1,0 +1,11 @@
+{
+  "name": "hackthelaw-domino",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "DOMINO_PROVIDER": "openai",
+    "DOMINO_RETRIEVAL": "keyword",
+    "MISTRAL_INTENT_MODEL": "ministral-8b-latest"
+  }
+}

@@ -40,7 +40,8 @@ export function createHandler({
   fetchImpl = fetch,
   timeoutMs = 30_000,
   intentModel = process.env.MISTRAL_INTENT_MODEL ?? 'ministral-8b-latest',
-}: { apiKey?: string; fetchImpl?: typeof fetch; timeoutMs?: number; intentModel?: string } = {}) {
+  origins,
+}: { apiKey?: string; fetchImpl?: typeof fetch; timeoutMs?: number; intentModel?: string; origins?: Set<string> } = {}) {
   async function provider(path: string, body: FormData | string, res: ServerResponse) {
     const disconnected = new AbortController();
     const onDisconnect = () => { if (!res.writableEnded) disconnected.abort(); };
@@ -77,7 +78,7 @@ export function createHandler({
     };
     try {
       const origin = req.headers.origin;
-      if (origin && !allowedOrigins().has(origin)) throw new ApiError(403, 'Origin not allowed.');
+      if (origin && !(origins ?? allowedOrigins()).has(origin)) throw new ApiError(403, 'Origin not allowed.');
       if (req.url === '/api/status' && req.method === 'GET') {
         return send(200, {
           configured: Boolean(apiKey),
