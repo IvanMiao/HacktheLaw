@@ -10,10 +10,10 @@ export default defineConfig(({ mode }) => {
       fs: { allow: ['..'] },
       allowedHosts: true,
       proxy: {
-        '/api/realtime': { target: 'http://127.0.0.1:8788', ws: true },
-        '/api/intent': 'http://127.0.0.1:8787',
-        '/api/transcribe': 'http://127.0.0.1:8787',
-        '/api/status': 'http://127.0.0.1:8787',
+        '/api/realtime': { target: `http://127.0.0.1:${process.env.VOICE_REALTIME_PORT ?? 8788}`, ws: true },
+        '/api/intent': `http://127.0.0.1:${process.env.VOICE_PORT ?? 8787}`,
+        '/api/transcribe': `http://127.0.0.1:${process.env.VOICE_PORT ?? 8787}`,
+        '/api/status': `http://127.0.0.1:${process.env.VOICE_PORT ?? 8787}`,
       },
     },
   }

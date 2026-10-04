@@ -12,6 +12,7 @@ describe('case-aware application', () => {
       const html = renderToStaticMarkup(<LocaleProvider><App /></LocaleProvider>);
       expect(html).toContain(titles[id as keyof typeof titles]);
       expect(html).toContain('aria-label="Case"');
+      expect(html).toContain('Connections');
       if (id !== 'c1-c2') {expect(html.replace(/<option[^>]*>.*?<\/option>/g, '')).not.toContain('Bâtiself'); expect(html).toContain('SYNTHETIC');}
       if (id === 'c5' && mode === 'chains') expect(html).toContain('2025-11-03');
     }
