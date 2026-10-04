@@ -17,7 +17,7 @@
     "test": "vitest run",
     "eval": "tsx scripts/eval.ts",
     "record:sample": "tsx scripts/record-sample.ts",
-    "build:cloudflare": "npm run build && npm run typecheck:server && node scripts/build-worker.mjs",
+    "build:cloudflare": "npm run build && npm run typecheck:server",
     "deploy:cloudflare": "npm run build:cloudflare && npx wrangler pages deploy dist --project-name hackthelaw-domino --branch devin/1791112433-domino-demo --commit-dirty=true"
   },
   "dependencies": {

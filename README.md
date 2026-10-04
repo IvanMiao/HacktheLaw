@@ -24,6 +24,6 @@ Open [localhost:5173](http://localhost:5173). For voice, run `npm run voice:serv
 
 ## Live demo
 
-Hosted on Cloudflare Pages: [hackthelaw-domino.pages.dev](https://hackthelaw-domino.pages.dev).
+Static frontend hosted on Cloudflare Pages: [hackthelaw-domino.pages.dev](https://hackthelaw-domino.pages.dev). Hosted AI and backend services are disabled; the recorded sample remains available.
 
 See [web/README.md](web/README.md) for deployment details.
