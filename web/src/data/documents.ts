@@ -1,7 +1,7 @@
-import cass2003 from '../../../data/caselaw/Cour de cassation chambre mixte 14 fevrier 2003 - n00-19423.md?raw';
-import cass2014 from '../../../data/caselaw/Cour de cassation chambre mixte 12 decembre 2014 - n13-19684.md?raw';
-import pdf2003 from '../../../data/caselaw/Cour de cassation chambre mixte 14 fevrier 2003 - n00-19423.pdf?url';
-import pdf2014 from '../../../data/caselaw/Cour de cassation chambre mixte 12 decembre 2014 - n13-19684.pdf?url';
+import { cass2003, cass2014 } from './caseLawTexts.ts';
+// PDF URLs are attached by the browser dataset provider.
+const pdf2003 = '';
+const pdf2014 = '';
 
 export type DocGroup = 'case' | 'caselaw' | 'statute';
 

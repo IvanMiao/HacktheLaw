@@ -1,11 +1,12 @@
-import { french } from './fr';
+import { french } from './fr.ts';
+import { casesFrench } from './casesFr.ts';
 
 export type Locale = 'en' | 'fr';
 export type Translator = (text: string, values?: Record<string, string | number>) => string;
 
 export function translator(locale: Locale): Translator {
   return (text, values = {}) => {
-    const template = locale === 'fr' ? french[text] ?? text : text;
+    const template = locale === 'fr' ? french[text] ?? casesFrench[text] ?? text : text;
     return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => String(values[key] ?? placeholder));
   };
 }

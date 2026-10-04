@@ -24,7 +24,7 @@ No key is bundled or sent to the browser. This is a **local-development** server
 - The local backend calls `POST https://api.mistral.ai/v1/chat/completions` with a strict **per-action JSON schema**. Default intent model is **`ministral-8b-latest`**, which was actually verified. Override only on the server with `MISTRAL_INTENT_MODEL`. The initially tried `mistral-small-latest` returned HTTP 429 with the supplied account; it is **not** claimed verified.
 - Every returned action, target, boolean and source ID is validated on both server and client. No arbitrary tools, code execution or legal-fact confirmation are possible. Unsupported requests fail clearly without changing state. Provider limits/timeouts/errors have no fake offline/provider fallback; the original demo controls remain available.
 - Explanations and challenge summaries are generated from **the existing deterministic engine**, not free-form model legal opinions. Sources retain the teammate's real/mock provenance labels. Previews are visibly **hypothetical**, idempotent and separate from lawyer decisions. Restore clears only `whatIf`, preserving decisions and the art. 642 setting.
-- The command panel has English/Chinese labels without translating/replacing the teammate's English UI.
+- The command panel retains its own English/Chinese labels; the teammate's EN/FR interface and memo translations are preserved.
 
 Supported actions: `show_evidence`, `explain_link`, `preview_scenario`, `reset_scenario`, `show_mode`, `challenge_defence` (read-only). `unsupported` is an explicit no-op result.
 
@@ -39,7 +39,7 @@ Privacy: audio, command text and the bundled demo context go to Mistral via your
 
 ## Verification and reproducibility
 
-- `npm test` — **41 tests / 6 files**, including all original 7 engine tests; strict target/source validation, polarity, idempotency, decision-preserving reset, missing key, audio limits/MIME, timeout, redacted rate-limit recovery, track cleanup, cancellation/stale-response guards and accessible panel rendering. Provider mocks are explicitly test-only.
+- `npm test` — **68 tests / 14 files**, including all original 7 engine tests; strict target/source validation, polarity, idempotency, decision-preserving reset, missing key, audio limits/MIME, timeout, redacted rate-limit recovery, track cleanup, cancellation/stale-response guards and accessible panel rendering. Provider mocks are explicitly test-only.
 - `npm run build` — TypeScript + production Vite bundle.
 - `npm run typecheck:server` — strict backend/shared-contract TypeScript check.
 - `npm run lint` — clean, with no outstanding lint warnings.
@@ -60,6 +60,21 @@ Recheck the retained real receipts through the actual engine without another pro
 For a **new authorized live** probe, generate a short WAV saying “What if the 2022 email acknowledges the debt?”, start the local backend, then run `npm run voice:smoke -- --live /absolute/path/to/command.wav`. This opt-in script makes exactly 3 generation calls: STT, email intent, conciliation intent. It fails on unavailable/invalid provider results and writes `.verification/live-cli-evidence.json`; it does not silently switch to replay. `--help` makes no provider calls. Browser DOM acceptance is separate from CLI replay.
 
 Official contracts used: [offline transcription](https://docs.mistral.ai/studio-api/audio/speech_to_text/offline_transcription), [Voxtral Mini Transcribe 2](https://docs.mistral.ai/models/voxtral-mini-transcribe-26-02), [structured output](https://docs.mistral.ai/studio/conversations/structured-output/custom), [chat endpoint](https://docs.mistral.ai/api/endpoint/chat).
+
+## Selectable case samples
+
+The top-bar **Case** selector keeps the original combined C1/C2 sample and adds standalone C3 insolvency, C4 objection timing and C5 ordinary appeal lapse. Share `?mode=chains&case=c3&lang=fr` (also `c1-c2`, `c4`, `c5`). Switching case resets reviews, hypotheses, source/fact selection and pending voice work; switching language preserves the current case review.
+
+Additional documents are embedded **SYNTHETIC** fixtures with exact source highlights, not retrieved court records or official law. Each sample has its own deterministic chains, timeline, legal-review caveats, what-if controls and memo. C3 declaration does not lift the separate payment stay; C4 timely objection does not guarantee transfer; C5 previews are pre-order only and cannot undo the actual lapse order. C5 uses CPC 641/642 to adjust 1 November 2025 to 3 November (17 days late), independently of the original substantive-limitation flag.
+
+Voice/text examples for the active sample:
+- C3: “What if a regular claim declaration was filed in time?” (`q-declared=true`).
+- C4: “What if jurisdiction was objected to before the merits?” (`q-merits-first=false`).
+- C5: “What if appellant submissions were filed in time?” (`q-late=true`), or a qualifying pre-order force majeure (`q-force-majeure=true`).
+
+Schemas and evidence validation are selected-case-only. Unknown/foreign case targets are rejected on server and client. New-case provider coverage here is explicitly fake/injected; no real new-case Mistral or human microphone test is claimed. Final integrated realtime acceptance is owned by the parent lane.
+
+Implementation plan, source corrections, executed gates, browser evidence and local startup handoff: [CASE_INTEGRATION_PLAN.md](../docs/CASE_INTEGRATION_PLAN.md), [CASE_INTEGRATION_VERIFICATION.md](../docs/CASE_INTEGRATION_VERIFICATION.md).
 
 ## Original demo sources and shortcuts
 

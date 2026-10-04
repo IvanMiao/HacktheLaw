@@ -10,7 +10,10 @@ import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
 import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
-import { CASE, FACTS, QUALIFICATIONS, type Anchor } from './data/case';
+import type { Anchor } from './data/case';
+import { CASE_CATALOG, getCase, type CaseId } from './data/catalog';
+import { createCaseSession, type CaseSession } from './data/caseSession';
+import { browserDataset, CaseContext, useCase } from './data/CaseContext';
 import { analyse, counterfactuals, initialState, type AnalysisState, type Decision } from './engine/chains';
 import { daysBetween, long } from './engine/dates';
 
@@ -18,27 +21,50 @@ type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
+  const [caseId, setCaseId] = useState<CaseId>(() => {
+    const requested = new URLSearchParams(location.search).get('case');
+    return CASE_CATALOG.find(c => c.id === requested)?.id ?? 'c1-c2';
+  });
+  const dataset = useMemo(() => browserDataset(getCase(caseId)), [caseId]);
+  // The synchronous identity guard rejects callbacks from an unmounted old case, including resets.
+  const [activeCase] = useState(() => createCaseSession(caseId));
+  const switchCase = (id: CaseId) => {
+    if (id === caseId) return;
+    activeCase.select(id);
+    const url = new URL(location.href);
+    url.searchParams.set('case', id);
+    ['confirmed','whatif','doc','link'].forEach(key => url.searchParams.delete(key));
+    history.replaceState(null, '', url);
+    setCaseId(id);
+  };
+  return <CaseContext.Provider value={dataset}><CaseApp key={caseId} onCase={switchCase} activeCase={activeCase} /></CaseContext.Provider>;
+}
+
+function CaseApp({onCase, activeCase}: {onCase:(id:CaseId) => void; activeCase:CaseSession}) {
+  const dataset = useCase();
+  const caseToken = useRef(activeCase.identity());
+  const {meta:CASE, facts:FACTS, qualifications:QUALIFICATIONS} = dataset;
   const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
   const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode ? 'ready' : 'start');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
   const [state, setState] = useState<AnalysisState>(() => {
-    const s = initialState();
+    const s = initialState(dataset);
     if (params.has('confirmed')) s.decisions = Object.fromEntries(Object.keys(s.decisions).map((k) => [k, 'confirmed']));
     const w = params.get('whatif');
-    if (w) s.whatIf = { [w]: !QUALIFICATIONS.find((q) => q.id === w)?.proposed };
+    if (w && QUALIFICATIONS.some(q => q.id === w)) s.whatIf = { [w]: !QUALIFICATIONS.find((q) => q.id === w)?.proposed };
     return s;
   });
-  const [factId, setFactId] = useState('f3');
-  const [linkId, setLinkId] = useState<string | null>(params.get('link'));
+  const [factId, setFactId] = useState(dataset.id === 'c1-c2' ? 'f3' : FACTS.find(f => f.qualification)?.id ?? FACTS[0].id);
+  const [linkId, setLinkId] = useState<string | null>(analyse(state, undefined, dataset).chains.flatMap(c => c.links).some(l => l.id === params.get('link')) ? params.get('link') : null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
-  const [docId, setDocId] = useState(params.get('doc') ?? 'email');
+  const [docId, setDocId] = useState(dataset.docs.some(d => d.id === params.get('doc')) ? params.get('doc')! : dataset.id === 'c1-c2' ? 'email' : FACTS.find(f => f.qualification)?.doc ?? dataset.docs[0].id);
   const [viewerOpen, setViewerOpen] = useState(true);
   const [presenter, setPresenter] = useState(false);
 
-  const analysis = useMemo(() => analyse(state, t), [state, t]);
-  const cfs = useMemo(() => counterfactuals(state, t), [state, t]);
+  const analysis = useMemo(() => analyse(state, t, dataset), [state, t, dataset]);
+  const cfs = useMemo(() => counterfactuals(state, t, dataset), [state, t, dataset]);
   const quotesByDoc = useMemo(() => {
     const m: Record<string, string[]> = {};
     const add = (a: Anchor) => {
@@ -48,7 +74,7 @@ export default function App() {
     FACTS.forEach((f) => f.anchors.forEach(add));
     analysis.chains.forEach((c) => c.links.forEach((l) => l.anchors.forEach(add)));
     return m;
-  }, [analysis]);
+  }, [analysis, FACTS]);
 
   const showAnchor = useCallback((a: Anchor) => { setDocId(a.doc); setAnchor({ ...a }); setViewerOpen(true); }, []);
   const decide = useCallback((qid: string, d: Decision) => setState((s) => ({ ...s, decisions: { ...s.decisions, [qid]: d } })), []);
@@ -59,9 +85,10 @@ export default function App() {
   });
   const selectFact = useCallback((id: string) => {
     setFactId(id);
-    const f = FACTS.find((x) => x.id === id)!;
+    const f = FACTS.find((x) => x.id === id);
+    if (!f) return;
     showAnchor(f.anchors[0]);
-  }, [showAnchor]);
+  }, [showAnchor, FACTS]);
   const openLink = (id: string | null) => {
     setLinkId(id);
     setMode('chains');
@@ -69,14 +96,15 @@ export default function App() {
     if (l?.anchors[0]) showAnchor(l.anchors[0]);
   };
 
-  const voiceContext = useMemo(() => buildContext(state), [state]);
+  const voiceContext = useMemo(() => buildContext(state, dataset), [state, dataset]);
   const latestState = useRef(state);
-  useEffect(() => { latestState.current = state; }, [state]);
+  useEffect(() => { latestState.current = state; }, [state, dataset]);
   const runVoiceIntent = (raw: Intent): string => {
+    activeCase.assert(caseToken.current);
     const current = latestState.current;
-    const intent = validateIntent(raw, buildContext(current));
-    const next = applyIntent(current, intent);
-    if (next !== current) setState(s => applyIntent(s, intent));
+    const intent = validateIntent(raw, buildContext(current, dataset));
+    const next = applyIntent(current, intent, dataset, activeCase.identity().caseId);
+    if (next !== current) setState(s => applyIntent(s, intent, dataset, activeCase.identity().caseId));
     if (intent.action === 'preview_scenario' || intent.action === 'challenge_defence') setMode('chains');
     if (intent.action === 'show_mode') setMode(intent.target as Mode);
     if (intent.action === 'explain_link') {
@@ -88,7 +116,7 @@ export default function App() {
       if (found) showAnchor(found);
       else { setDocId(intent.target!); setAnchor(null); setViewerOpen(true); }
     }
-    return describeIntent(next, intent);
+    return describeIntent(next, intent, dataset);
   };
 
   useEffect(() => {
@@ -109,7 +137,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stage, factId, mode, decide, selectFact]);
+  }, [stage, factId, mode, decide, selectFact, FACTS]);
 
   useEffect(() => { document.documentElement.classList.toggle('presenter', presenter); }, [presenter]);
 
@@ -127,7 +155,9 @@ export default function App() {
     <div className={`app mode-${mode} ${viewerOpen ? '' : 'viewer-closed'}`}>
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
-        <div className="case-name">{t(CASE.title)} <span className="muted">· {CASE.court} · {t('acting for the defendant')}</span></div>
+        <div className="case-name"><select aria-label={t('Case')} value={dataset.id} onChange={e => onCase(e.target.value as CaseId)}>
+          {CASE_CATALOG.map(c => <option key={c.id} value={c.id}>{c.id.toUpperCase()} · {t(c.meta.title)}</option>)}
+        </select><span className="muted"> · {CASE.court} · {t(CASE.side)}</span></div>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([m, label], i) => (
             <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{t(label)}<kbd>{i + 1}</kbd></button>
@@ -139,14 +169,14 @@ export default function App() {
 
       <div className={`banner ${grounds ? 'b-grounds' : 'b-none'}`} role="status">
         <span className="b-dot" />
-        <strong>{grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds }) : t('No ground found in the 2 enabled chains')}</strong>
+        <strong>{dataset.id === 'c1-c2' ? (grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds }) : t('No ground found in the 2 enabled chains')) : t('{count} active procedural consequences · {chains} enabled chains · legal review required', {count:grounds,chains:analysis.chains.length})}</strong>
         {contestedLinks > 0 && <span>· {t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {pendingAi > 0 && <span className="b-prov">· {t(pendingAi === 1 ? 'Provisional — {count} AI qualification awaiting review' : 'Provisional — {count} AI qualifications awaiting review', { count: pendingAi })}</span>}
         {whatIf && <span className="b-whatif">· {t('What-if scenario')} <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>{t('reset')}</button></span>}
-        <span className="b-right mono">{t('Next hearing {date} · in {days} days', { date: long(CASE.nextHearing, locale), days: daysBetween(CASE.asOf, CASE.nextHearing) })}</span>
+        {CASE.nextHearing && <span className="b-right mono">{t('Next hearing {date} · in {days} days', { date: long(CASE.nextHearing, locale), days: daysBetween(CASE.asOf, CASE.nextHearing) })}</span>}
       </div>
 
-      <VoicePanel context={voiceContext} onIntent={runVoiceIntent} />
+      <VoicePanel key={dataset.id} context={voiceContext} onIntent={runVoiceIntent} />
 
       <div className="body">
         {mode !== 'chains' && <aside className="col left"><FactList state={state} selected={factId} onSelect={(id) => { selectFact(id); if (mode !== 'facts') setMode('facts'); }} /></aside>}

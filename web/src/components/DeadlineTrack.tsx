@@ -1,5 +1,6 @@
 import { useLocale } from '../i18n/useLocale';
-import { CASE } from '../data/case';
+import { useCase } from '../data/CaseContext';
+import type { CASE as ORIGINAL_META } from '../data/case';
 import { addDays, fr, toDate } from '../engine/dates';
 import type { LimitationResult } from '../engine/limitation';
 
@@ -7,6 +8,8 @@ const W = 720, PAD = 24, BAR_Y = 70;
 
 export function DeadlineTrack({ lim }: { lim: LimitationResult }) {
   const { t } = useLocale();
+  const dataset = useCase();
+  const CASE = dataset.meta as typeof ORIGINAL_META;
   const from = '2021-01-01';
   const latest = [lim.expiry, CASE.writ2.served, CASE.asOf].sort().at(-1)!;
   const to = addDays(latest, 150);

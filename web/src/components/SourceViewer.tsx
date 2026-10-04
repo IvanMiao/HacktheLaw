@@ -1,7 +1,9 @@
 import { useLocale } from '../i18n/useLocale';
+import { useCase } from '../data/CaseContext';
+import { caseDocument } from '../data/catalog';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { Anchor } from '../data/case';
-import { DOCS, docById, type DocGroup } from '../data/documents';
+import type { DocGroup } from '../data/documents';
 import { fr } from '../engine/dates';
 import { highlight, locate } from './highlight';
 
@@ -11,7 +13,8 @@ type Props = { docId: string; onDoc: (id: string) => void; active: Anchor | null
 
 export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: Props) {
   const { t } = useLocale();
-  const doc = docById(docId);
+  const dataset = useCase();
+  const doc = caseDocument(dataset,docId);
   const activeRef = useRef<HTMLElement | null>(null);
   const activeQuote = active && active.doc === docId ? active.quote : null;
   const quotes = quotesByDoc[docId] ?? [];
@@ -27,7 +30,7 @@ export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: 
         <select value={docId} onChange={(e) => onDoc(e.target.value)} aria-label={t('Document')}>
           {GROUPS.map(([g, label]) => (
             <optgroup key={g} label={t(label)}>
-              {DOCS.filter((d) => d.group === g).map((d) => (
+              {dataset.docs.filter((d) => d.group === g).map((d) => (
                 <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}{d.provenance === 'mock' ? t(' (mock)') : ''}</option>
               ))}
             </optgroup>

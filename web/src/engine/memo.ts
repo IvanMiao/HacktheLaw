@@ -1,5 +1,5 @@
 import { CASE, qualById, type Anchor } from '../data/case';
-import { docById } from '../data/documents';
+import { ORIGINAL_CASE, caseDocument, type CaseDataset } from '../data/catalog.ts';
 import { value, type Analysis, type AnalysisState } from './chains';
 import { daysBetween, fr } from './dates';
 import { REGIMES } from './regimes';
@@ -10,7 +10,30 @@ type Block = { t: 'h1' | 'h2' | 'h3' | 'p' | 'li' | 'note'; parts: Part[] };
 
 const A = (doc: string, quote: string): Anchor => ({ doc, quote });
 
-export function buildMemo(analysis: Analysis, state: AnalysisState, t: Translator = english): Block[] {
+export function buildMemo(analysis: Analysis, state: AnalysisState, t: Translator = english, dataset: CaseDataset = ORIGINAL_CASE): Block[] {
+  if (dataset.id !== 'c1-c2') {
+    const blocks:Block[] = [
+      {t:'h1',parts:[t('Defence memo — {title}',{title:dataset.meta.title})]},
+      {t:'note',parts:[t('SYNTHETIC — fictional evidence; deterministic draft, not legal advice.')]},
+      {t:'p',parts:[t(dataset.meta.side), ' · ', dataset.meta.court, ' · ', t(dataset.meta.relationship)]},
+      {t:'h2',parts:[t('1. Case summary')]},
+      ...dataset.facts.map(f => ({t:'li' as const,parts:[`${fr(f.date)} — ${t(f.summary)} `,...f.anchors]})),
+      {t:'h2',parts:[t('2. Defences, in procedural order')]},
+    ];
+    for (const c of analysis.chains) {
+      blocks.push({t:'h3',parts:[`${c.id} — ${c.title} · ${t(c.status)}`]});
+      for (const l of c.links) blocks.push({t:'li',parts:[`${l.title}: ${l.statement} [${t(l.status.replace('_',' '))}]${l.rule ? ` (${l.rule})` : ''} `,...l.anchors]});
+      const broken = c.links.find(l => l.status === 'broken');
+      if (broken) blocks.push({t:'note',parts:[broken.brokenReason ?? '']});
+      const regime = c.links.find(l => l.regime)?.regime;
+      if (regime) blocks.push({t:'p',parts:[...Object.values(REGIMES[regime]).map(text => `${t(text)} · `)]});
+    }
+    blocks.push({t:'h2',parts:[t('4. Points for lawyer review')]});
+    for (const notice of analysis.notices ?? []) blocks.push({t:'note',parts:[notice]});
+    for (const q of dataset.qualifications) blocks.push({t:'li',parts:[`${t(q.question)} — ${t(value(state,q.id,dataset) ? q.yes : q.no)}. ${t(q.reasoning)}`]});
+    if (Object.keys(state.whatIf).length) blocks.push({t:'note',parts:[t('What-if scenario — lawyer decisions unchanged.')]});
+    return blocks;
+  }
   const b: Block[] = [];
   const days = daysBetween(CASE.asOf, CASE.nextHearing);
   const live = analysis.chains.filter((c) => c.status !== 'fails').sort((x, y) => x.hingesOn.length - y.hingesOn.length);
@@ -53,7 +76,7 @@ export function buildMemo(analysis: Analysis, state: AnalysisState, t: Translato
   return b;
 }
 
-export const toMd = (blocks: Block[], t: Translator = english) => blocks.map(({ t: kind, parts }) => {
-  const text = parts.map((p) => (typeof p === 'string' ? p : `[${t(docById(p.doc).short)}]`)).join('');
+export const toMd = (blocks: Block[], t: Translator = english, dataset: CaseDataset = ORIGINAL_CASE) => blocks.map(({ t: kind, parts }) => {
+  const text = parts.map((p) => (typeof p === 'string' ? p : `[${t(caseDocument(dataset,p.doc).short)}]`)).join('');
   return { h1: `# ${text}`, h2: `\n## ${text}`, h3: `\n### ${text}`, p: text, li: `- ${text}`, note: `> ${text}` }[kind];
 }).join('\n');

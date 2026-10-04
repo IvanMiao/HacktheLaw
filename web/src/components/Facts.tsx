@@ -1,14 +1,16 @@
 import { useLocale } from '../i18n/useLocale';
-import { FACTS, qualById, type Anchor, type Fact } from '../data/case';
-import { docById } from '../data/documents';
+import { useCase } from '../data/CaseContext';
+import { caseDocument, caseQualification } from '../data/catalog';
+import { type Anchor, type Fact } from '../data/case';
 import { value, type Analysis, type AnalysisState, type Counterfactual, type Decision } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
 
 function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
   const { t } = useLocale();
-  const q = qualById(qid);
-  const v = value(state, qid);
+  const dataset = useCase();
+  const q = caseQualification(dataset,qid);
+  const v = value(state, qid, dataset);
   const d = state.decisions[qid];
   const whatIf = qid in state.whatIf;
   const ai = q.source === 'ai_inferred' && d === 'proposed' && !whatIf;
@@ -23,11 +25,12 @@ function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
 
 export function FactList({ state, selected, onSelect }: { state: AnalysisState; selected: string; onSelect: (id: string) => void }) {
   const { t } = useLocale();
+  const dataset = useCase();
   return (
     <div className="facts">
-      <div className="col-head">{t('Facts')} <span className="muted">{FACTS.length} · {t('chronological')}</span></div>
+      <div className="col-head">{t('Facts')} <span className="muted">{dataset.facts.length} · {t('chronological')}</span></div>
       <ol>
-        {FACTS.map((f) => (
+        {dataset.facts.map((f) => (
           <li key={f.id}>
             <button className={`fact ${selected === f.id ? 'sel' : ''}`} onClick={() => onSelect(f.id)}>
               <span className="mono date">{fr(f.date)}</span>
@@ -49,7 +52,8 @@ type DetailProps = {
 
 export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onOpenLink }: DetailProps) {
   const { t } = useLocale();
-  const q = fact.qualification ? qualById(fact.qualification) : undefined;
+  const dataset = useCase();
+  const q = fact.qualification ? caseQualification(dataset,fact.qualification) : undefined;
   const decision = q && state.decisions[q.id];
   const cf = q && cfs.find((c) => c.qid === q.id);
   const quotes = new Set(fact.anchors.map((a) => a.quote));
@@ -58,7 +62,7 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
 
   return (
     <div className="detail">
-      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)} · {docById(fact.doc).title}</div>
+      <div className="eyebrow"><span className="mono">{fr(fact.date)}</span> · {t(fact.kind)} · {caseDocument(dataset,fact.doc).title}</div>
       <h2>{t(fact.summary)}</h2>
       {fact.anchors.map((a) => (
         <figure key={a.quote} className="excerpt">

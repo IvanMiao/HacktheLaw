@@ -1,5 +1,5 @@
-import { english, type Translator } from '../i18n/translate';
-import { addYears, fr, isWeekend, nextWorkingDay, weekday } from './dates';
+import { english, type Translator } from '../i18n/translate.ts';
+import { addYears, fr, isWeekend, nextWorkingDay, weekday } from './dates.ts';
 
 export type LimitationEvent = {
   factId: string;

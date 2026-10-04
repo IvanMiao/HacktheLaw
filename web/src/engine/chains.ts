@@ -1,8 +1,10 @@
-import { english, type Translator } from '../i18n/translate';
-import { CASE, QUALIFICATIONS, type Anchor } from '../data/case';
-import { addDays, daysBetween, fr } from './dates';
-import { computeLimitation, type LimitationResult } from './limitation';
-import type { RegimeKey } from './regimes';
+import { english, type Translator } from '../i18n/translate.ts';
+import { CASE, type Anchor } from '../data/case.ts';
+import { ORIGINAL_CASE, caseQualification, type CaseDataset } from '../data/catalog.ts';
+import { analyseAdditional } from './additionalChains.ts';
+import { addDays, daysBetween, fr } from './dates.ts';
+import { computeLimitation, type LimitationResult } from './limitation.ts';
+import type { RegimeKey } from './regimes.ts';
 
 export type Decision = 'proposed' | 'confirmed' | 'rejected';
 
@@ -13,8 +15,8 @@ export type AnalysisState = {
   art642: boolean;
 };
 
-export const initialState = (): AnalysisState => ({
-  decisions: Object.fromEntries(QUALIFICATIONS.map((q) => [q.id, 'proposed' as Decision])),
+export const initialState = (dataset: CaseDataset = ORIGINAL_CASE): AnalysisState => ({
+  decisions: Object.fromEntries(dataset.qualifications.map((q) => [q.id, 'proposed' as Decision])),
   whatIf: {},
   art642: true,
 });
@@ -38,22 +40,22 @@ export type Link = {
   brokenReason?: string;
 };
 
-export type ChainResult = { id: 'C1' | 'C2'; title: string; subtitle: string; links: Link[]; status: ChainStatus; outcome: string; hingesOn: string[] };
+export type ChainResult = { id: string; title: string; subtitle: string; links: Link[]; status: ChainStatus; outcome: string; hingesOn: string[] };
 
-export type Analysis = { chains: ChainResult[]; limitation: LimitationResult; contestedQuals: string[] };
+export type Analysis = { chains: ChainResult[]; limitation: LimitationResult; contestedQuals: string[]; notices?: string[]; timeline?: {label:string; date:string}[] };
 
 type Ctx = { v: (q: string) => boolean; isContested: (q: string) => boolean; lim: LimitationResult; t: Translator };
 
 type LinkDef = Omit<Link, 'status' | 'brokenReason'> & { holds: boolean; brokenReason?: string };
 
-export function value(state: AnalysisState, qid: string): boolean {
+export function value(state: AnalysisState, qid: string, dataset: CaseDataset = ORIGINAL_CASE): boolean {
   if (qid in state.whatIf) return state.whatIf[qid];
-  const q = QUALIFICATIONS.find((x) => x.id === qid)!;
+  const q = caseQualification(dataset, qid);
   return state.decisions[qid] === 'rejected' ? !q.proposed : q.proposed;
 }
 
-export function isContested(state: AnalysisState, qid: string): boolean {
-  const q = QUALIFICATIONS.find((x) => x.id === qid)!;
+export function isContested(state: AnalysisState, qid: string, dataset: CaseDataset = ORIGINAL_CASE): boolean {
+  const q = caseQualification(dataset, qid);
   return q.source === 'ai_inferred' && state.decisions[qid] === 'proposed' && !(qid in state.whatIf);
 }
 
@@ -147,7 +149,8 @@ function chainResult(id: ChainResult['id'], title: string, subtitle: string, out
   return { id, title, subtitle, links, status, outcome, hingesOn };
 }
 
-export function analyse(state: AnalysisState, t: Translator = english): Analysis {
+export function analyse(state: AnalysisState, t: Translator = english, dataset: CaseDataset = ORIGINAL_CASE): Analysis {
+  if (dataset.id !== 'c1-c2') return analyseAdditional(state, dataset, t);
   const lim = limitationFor(state, t);
   const ctx: Ctx = { v: (q) => value(state, q), isContested: (q) => isContested(state, q), lim, t };
   const chains = [
@@ -160,12 +163,12 @@ export function analyse(state: AnalysisState, t: Translator = english): Analysis
 
 export type Counterfactual = { qid: string; label: string; flipsTo: boolean; active: boolean; effects: { chain: string; from: ChainStatus; to: ChainStatus }[] };
 
-export function counterfactuals(state: AnalysisState, t: Translator = english): Counterfactual[] {
+export function counterfactuals(state: AnalysisState, t: Translator = english, dataset: CaseDataset = ORIGINAL_CASE): Counterfactual[] {
   const baseState = { ...state, whatIf: {} };
-  const base = analyse(baseState);
-  return QUALIFICATIONS.map((q) => {
-    const flipsTo = !value(baseState, q.id);
-    const alt = analyse({ ...baseState, whatIf: { [q.id]: flipsTo } });
+  const base = analyse(baseState, t, dataset);
+  return dataset.qualifications.map((q) => {
+    const flipsTo = !value(baseState, q.id, dataset);
+    const alt = analyse({ ...baseState, whatIf: { [q.id]: flipsTo } }, t, dataset);
     const effects = alt.chains
       .map((c, i) => ({ chain: c.id, from: base.chains[i].status, to: c.status }))
       .filter((e) => (e.from === 'fails') !== (e.to === 'fails'));
