@@ -20,19 +20,32 @@ const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['mem
 export default function App() {
   const [bundle, setBundle] = useState<CaseBundle>(SAMPLE);
   const [hasLoaded, setHasLoaded] = useState(false);
-  return <BundleProvider bundle={bundle}><AppContent key={bundle.id} onBundle={setBundle} initialReady={hasLoaded} onLoaded={() => setHasLoaded(true)} /></BundleProvider>;
+  const [fallbackMessage, setFallbackMessage] = useState('');
+  return <BundleProvider bundle={bundle}><AppContent
+    key={bundle.id}
+    onBundle={setBundle}
+    initialReady={hasLoaded}
+    onLoaded={() => setHasLoaded(true)}
+    fallbackMessage={fallbackMessage}
+    onFallback={setFallbackMessage}
+    onClearFallback={() => setFallbackMessage('')}
+  /></BundleProvider>;
 }
 
-function AppContent({ onBundle, initialReady, onLoaded }: {
+function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback }: {
   onBundle: (bundle: CaseBundle) => void;
   initialReady: boolean;
   onLoaded: () => void;
+  fallbackMessage: string;
+  onFallback: (message: string) => void;
+  onClearFallback: () => void;
 }) {
   const { bundle, docs, factOf, qualOf } = useBundle();
   const { locale, t } = useLocale();
   const params = new URLSearchParams(location.search);
   const initialMode = params.get('mode') as Mode | null;
   const [stage, setStage] = useState<'start' | 'loading' | 'ready'>(initialMode || initialReady ? 'ready' : 'start');
+  const currentStage = initialReady ? 'ready' : stage;
   const [startError, setStartError] = useState('');
   const [mode, setMode] = useState<Mode>(initialMode ?? 'facts');
   const [state, setState] = useState<AnalysisState>(() => {
@@ -53,9 +66,23 @@ function AppContent({ onBundle, initialReady, onLoaded }: {
   const [docId, setDocId] = useState(params.get('doc') ?? defaultDoc);
   const [viewerOpen, setViewerOpen] = useState(true);
   const [presenter, setPresenter] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(false);
 
   const analysis = useMemo(() => analyse(bundle, state, t), [bundle, state, t]);
   const cfs = useMemo(() => counterfactuals(bundle, state, t), [bundle, state, t]);
+  const provenance = bundle.provider && bundle.models?.agent
+    ? t('AI · {provider} {model} · {status}', {
+      provider: bundle.provider,
+      model: bundle.models.agent,
+      status: t(bundle.origin === 'cached' ? 'cached' : 'live'),
+    })
+    : t('Hand-checked reference');
+  const generatedAt = bundle.generatedAt ? new Date(bundle.generatedAt) : undefined;
+  const recordedDate = generatedAt && !Number.isNaN(generatedAt.getTime())
+    ? new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(generatedAt)
+    : long(bundle.profile.asOf, locale);
+  const trace = bundle.trace ?? [];
+  const traceStart = trace[0]?.at ?? 0;
   const quotesByDoc = useMemo(() => {
     const quotes: Record<string, string[]> = {};
     const add = (item: Anchor) => {
@@ -89,7 +116,7 @@ function AppContent({ onBundle, initialReady, onLoaded }: {
   };
 
   useEffect(() => {
-    if (stage !== 'ready') return;
+    if (currentStage !== 'ready') return;
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.metaKey || event.ctrlKey) return;
       const index = bundle.facts.findIndex((fact) => fact.id === factId);
@@ -104,22 +131,24 @@ function AppContent({ onBundle, initialReady, onLoaded }: {
       else if (event.key === 'c' && qid && mode === 'facts') decide(qid, 'confirmed');
       else if (event.key === 'r' && qid && mode === 'facts') decide(qid, 'rejected');
       else if (event.key === 'p') setPresenter((current) => !current);
-      else if (event.key === 'Escape') setLinkId(null);
+      else if (event.key === 'Escape') { setLinkId(null); setTraceOpen(false); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stage, factId, mode, decide, selectFact, bundle.facts]);
+  }, [currentStage, factId, mode, decide, selectFact, bundle.facts]);
 
   useEffect(() => { document.documentElement.classList.toggle('presenter', presenter); }, [presenter]);
 
-  if (stage !== 'ready') {
+  if (currentStage !== 'ready') {
     return <StartScreen
-      loading={stage === 'loading'}
+      loading={currentStage === 'loading'}
       error={startError}
-      onLoad={() => { setStartError(''); setStage('loading'); }}
+      onLoad={() => { onClearFallback(); setStartError(''); setStage('loading'); }}
       onDone={() => { setStage('ready'); onLoaded(); }}
       onError={(message) => { setStartError(message); setStage('start'); }}
       onBundle={onBundle}
+      onFallback={onFallback}
+      onReference={() => { setStartError(''); onClearFallback(); onBundle(SAMPLE); }}
     />;
   }
 
@@ -135,16 +164,24 @@ function AppContent({ onBundle, initialReady, onLoaded }: {
       <header className="topbar">
         <div className="brand"><Logo /><span>Domino</span></div>
         <div className="case-name">{t(bundle.profile.title)} <span className="muted">· {bundle.profile.court} · {t(bundle.profile.side)}</span></div>
+        <span className="b-prov qbadge provenance-chip">{provenance}</span>
         <nav className="modes" aria-label={t('Mode')}>
           {MODES.map(([currentMode, label], i) => (
             <button key={currentMode} className={mode === currentMode ? 'on' : ''} onClick={() => setMode(currentMode)}>{t(label)}<kbd>{i + 1}</kbd></button>
           ))}
         </nav>
+        {trace.length > 0 && <button className="btn trace-toggle" aria-expanded={traceOpen} onClick={() => setTraceOpen((open) => !open)}>{t('Trace')}</button>}
         <LanguageSwitch />
         <div className="asof mono">{t('As of')} {long(bundle.profile.asOf, locale)}</div>
       </header>
 
       <div className={`banner ${grounds ? 'b-grounds' : 'b-none'}`} role="status">
+        {fallbackMessage && (
+          <div className="fallback-callout callout amber">
+            <span>{t('Live analysis unavailable ({message}) — showing the recorded AI analysis from {date}.', { message: fallbackMessage, date: recordedDate })}</span>
+            <button className="linkish" aria-label={t('Dismiss')} onClick={onClearFallback}>×</button>
+          </div>
+        )}
         <span className="b-dot" />
         <strong>{grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
           : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
@@ -170,6 +207,25 @@ function AppContent({ onBundle, initialReady, onLoaded }: {
           ? <aside className="col right"><SourceViewer docId={docId} onDoc={(id) => { setDocId(id); setAnchor(null); }} active={anchor} quotesByDoc={quotesByDoc} onCollapse={() => setViewerOpen(false)} /></aside>
           : <button className="viewer-tab" onClick={() => setViewerOpen(true)}>{t('Sources')}</button>}
       </div>
+      {traceOpen && trace.length > 0 && (
+        <aside className="trace-drawer" aria-label={t('Trace')}>
+          <div className="trace-head">
+            <h2>{t('Trace')}</h2>
+            <button className="linkish" aria-label={t('Close')} onClick={() => setTraceOpen(false)}>×</button>
+          </div>
+          <ol className="trace-list">
+            {trace.map((item, index) => (
+              <li key={`${item.at}-${index}`} className={`trace-event kind-${item.kind}`}>
+                <div className="trace-meta">
+                  <span className="mono">+{Math.max(0, (item.at - traceStart) / 1000).toFixed(1)} s</span>
+                  <span>{t(item.stage)} · {t(item.kind)}</span>
+                </div>
+                <p>{item.text}</p>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      )}
     </div>
   );
 }

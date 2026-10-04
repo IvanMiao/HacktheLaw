@@ -2,15 +2,19 @@ import { useLocale } from '../i18n/useLocale';
 import { useRef, useState } from 'react';
 import { useBundle } from '../data/useBundle';
 import type { AgentEvent, CaseBundle } from '../data/bundle';
+import aiBundleJson from '../../../data/sample-case/ai-bundle.json';
 import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Glyphs';
 
+const aiBundle = aiBundleJson as unknown as CaseBundle;
 type StreamLine = { type: 'event'; event: AgentEvent } | { type: 'bundle'; bundle: CaseBundle } | { type: 'error'; message: string };
 type Props = {
   loading: boolean;
   onLoad: () => void;
   onDone: () => void;
   onError: (message: string) => void;
+  onFallback: (message: string) => void;
+  onReference: () => void;
   error?: string;
   onBundle?: (bundle: CaseBundle) => void;
 };
@@ -24,21 +28,22 @@ async function encodeFile(file: File) {
   return { name: file.name, mime: file.type || 'application/octet-stream', base64: btoa(binary) };
 }
 
-export function StartScreen({ loading, onLoad, onDone, onError, error, onBundle }: Props) {
+export function StartScreen({ loading, onLoad, onDone, onError, onFallback, onReference, error, onBundle }: Props) {
   const { t } = useLocale();
   const { bundle } = useBundle();
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [fresh, setFresh] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const run = async (input: { sample: true } | { files: File[] }) => {
+  const run = async (input: { sample: true; fresh?: boolean } | { files: File[] }) => {
     setBusy(true);
     setEvents([]);
     onLoad();
     try {
       const payload = 'sample' in input
-        ? { sample: true }
+        ? { sample: true, ...(input.fresh ? { fresh: true } : {}) }
         : { files: await Promise.all(input.files.map(encodeFile)) };
       const response = await fetch('/api/cases', {
         method: 'POST',
@@ -53,16 +58,13 @@ export function StartScreen({ loading, onLoad, onDone, onError, error, onBundle 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffered = '';
-      let receivedBundle = false;
+      let receivedBundle: CaseBundle | undefined;
       const consume = (line: string) => {
         if (!line.trim()) return;
         const item = JSON.parse(line) as StreamLine;
         if (item.type === 'event') setEvents((previous) => [...previous, item.event].slice(-100));
         else if (item.type === 'error') throw new Error(item.message);
-        else {
-          receivedBundle = true;
-          onBundle?.(item.bundle);
-        }
+        else receivedBundle = item.bundle;
       };
       while (true) {
         const { value, done } = await reader.read();
@@ -74,9 +76,15 @@ export function StartScreen({ loading, onLoad, onDone, onError, error, onBundle 
       }
       consume(buffered);
       if (!receivedBundle) throw new Error('The pipeline ended without returning a case bundle');
+      onBundle?.(receivedBundle);
       onDone();
     } catch (caught) {
-      onError(caught instanceof Error ? caught.message : String(caught));
+      const message = caught instanceof Error ? caught.message : String(caught);
+      if ('sample' in input) {
+        onBundle?.({ ...aiBundle, origin: 'cached' });
+        onFallback(message);
+        onDone();
+      } else onError(message);
     } finally {
       setBusy(false);
     }
@@ -117,9 +125,11 @@ export function StartScreen({ loading, onLoad, onDone, onError, error, onBundle 
                 {t('Analyze uploaded files')}
               </button>
             )}
-            <button className="btn lg" onClick={() => void run({ sample: true })} disabled={busy} autoFocus>
-              {t('Load sample case')}
+            <button className="btn primary lg" onClick={() => void run({ sample: true, fresh })} disabled={busy} autoFocus>
+              {t('Analyse sample case with AI')}
             </button>
+            <label className="fresh-run"><input type="checkbox" checked={fresh} onChange={(event) => setFresh(event.target.checked)} />{t('Fresh run (calls the model)')}</label>
+            <button className="linkish reference-link" onClick={() => { onReference(); onDone(); }}>{t('Open hand-checked reference')}</button>
             <p className="muted small">{t(bundle.profile.title)} · {bundle.profile.court}</p>
           </>
         ) : (

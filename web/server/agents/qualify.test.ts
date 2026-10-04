@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Fact, QualKind } from '../../src/data/bundle';
 import type { Doc } from '../../src/data/documents';
-import type { LlmClient } from '../providers';
+import type { LlmClient, ToolDef } from '../providers';
 import { qualifyFacts, questionsFor } from './qualify';
 
 const quote = 'The source records this procedural event with exact words.';
@@ -29,15 +29,21 @@ function fact(id: string, role: Fact['role'], date = '2026-01-12'): Fact {
   };
 }
 
-function fakeClient(confidenceFor?: Partial<Record<QualKind, 'high' | 'medium' | 'low'>>): LlmClient {
+function fakeClient(config: {
+  confidenceFor?: Partial<Record<QualKind, 'high' | 'medium' | 'low'>>;
+  ruleFor?: Partial<Record<QualKind, string>>;
+  skipAnswer?: boolean;
+  onTools?: (tools: ToolDef[]) => void;
+} = {}): LlmClient {
   const client = {
     provider: 'openai' as const,
     async runTools(options: {
       model: string;
-      tools: { name: string; parameters: { properties: Record<string, unknown> } }[];
+      tools: ToolDef[];
       handlers: Record<string, (args: any) => Promise<unknown>>;
       onStep?: (call: { name: string; args: any; result: unknown }) => void;
     }) {
+      config.onTools?.(options.tools);
       const answerTool = options.tools.find((tool) => tool.name === 'answer')!;
       const decision = Object.keys(answerTool.parameters.properties)
         .find((key) => !['confidence', 'reasoning_en', 'reasoning_fr', 'rule', 'evidence'].includes(key))!;
@@ -56,12 +62,13 @@ function fakeClient(confidenceFor?: Partial<Record<QualKind, 'high' | 'medium' |
         outcome: 'caducite',
         attempt_found: false,
       };
+      if (config.skipAnswer) return { steps: 1, usage: { [options.model]: { input: 5, output: 4, reasoning: 0 } } };
       const args = {
         [decision]: values[decision],
-        confidence: confidenceFor?.[kind] ?? 'high',
+        confidence: config.confidenceFor?.[kind] ?? 'high',
         reasoning_en: 'The text supports the answer. The opposite is possible.',
         reasoning_fr: 'Le texte étaye la réponse. L’inverse reste possible.',
-        rule: 'Agent rule',
+        rule: config.ruleFor?.[kind] ?? 'Agent rule',
         evidence: [{ doc_id: caseDoc.id, quote }],
       };
       const result = await options.handlers.answer(args);
@@ -121,12 +128,46 @@ describe('qualification question generation and mapping', () => {
   it('uses ai_inferred for a low-confidence rule qualification', async () => {
     const facts = [fact('f1', 'formal_notice')];
     const result = await qualifyFacts(facts, [caseDoc], [], emptyIndex, {
-      client: fakeClient({ formal_notice: 'low' }),
+      client: fakeClient({ confidenceFor: { formal_notice: 'low' } }),
       model: 'test-model',
       provider: 'openai',
       profile,
       emit,
     });
     expect(result.qualifications[0]).toMatchObject({ kind: 'formal_notice', source: 'ai_inferred', confidence: 'low' });
+  });
+
+  it('marks fallback answers and fails to infer them as AI answers', async () => {
+    const facts = [fact('f1', 'formal_notice')];
+    const result = await qualifyFacts(facts, [caseDoc], [], emptyIndex, {
+      client: fakeClient({ skipAnswer: true }),
+      model: 'test-model',
+      provider: 'openai',
+      profile,
+      emit,
+    });
+
+    expect(result.qualifications[0]).toMatchObject({ fallback: true, proposed: false, rule: 'arts. 2240–2244 C. civ. (exhaustive list)' });
+  });
+
+  it('uses only short writ outcome citations and describes the rule field', async () => {
+    const facts = [fact('f1', 'writ_sanction')];
+    let ruleDescription = '';
+    const result = await qualifyFacts(facts, [caseDoc], [], emptyIndex, {
+      client: fakeClient({
+        ruleFor: { writ_outcome: 'x'.repeat(41) },
+        onTools: (tools) => {
+          const rule = tools.find((tool) => tool.name === 'answer')?.parameters.properties.rule as { description?: string };
+          ruleDescription = rule.description ?? '';
+        },
+      }),
+      model: 'test-model',
+      provider: 'openai',
+      profile,
+      emit,
+    });
+
+    expect(ruleDescription).toBe("Short citation only, e.g. 'art. 857 CPC'.");
+    expect(result.qualifications[0].rule).toBe('art. 857 CPC');
   });
 });

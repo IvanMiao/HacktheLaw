@@ -58,7 +58,7 @@ function answerTool(kind: QualKind): ToolDef {
       confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
       reasoning_en: { type: 'string' },
       reasoning_fr: { type: 'string' },
-      rule: { type: 'string' },
+      rule: { type: 'string', description: "Short citation only, e.g. 'art. 857 CPC'." },
       evidence: {
         type: 'array',
         items: schema({ doc_id: { type: 'string' }, quote: { type: 'string' } }),
@@ -167,12 +167,14 @@ function qualifyOne(candidate: Candidate, facts: Fact[], allDocs: Doc[], index: 
         event(options.emit, 'qualify', 'tool', `${kind}: ${name}${query}`);
       },
     });
-    if (!answer) {
+    const fallback = !answer;
+    if (fallback) {
       answer = fallbackAnswer(kind);
       event(options.emit, 'qualify', 'warn', `${kind} ${fact.id}: agent did not call answer; using fallback`);
     }
+    const resolvedAnswer = answer ?? fallbackAnswer(kind);
     const anchors: Anchor[] = [];
-    for (const item of answer.evidence ?? []) {
+    for (const item of resolvedAnswer.evidence ?? []) {
       const doc = docsById.get(item.doc_id);
       const location = doc && locate(doc.text, item.quote);
       if (!doc || !location) {
@@ -181,7 +183,7 @@ function qualifyOne(candidate: Candidate, facts: Fact[], allDocs: Doc[], index: 
       }
       anchors.push({ doc: doc.id, quote: doc.text.slice(location.start, location.end), verified: true });
     }
-    const lowConfidence = answer.confidence === 'low';
+    const lowConfidence = resolvedAnswer.confidence === 'low';
     const source = kind === 'conciliation_clause' || kind === 'acknowledgment' || lowConfidence ? 'ai_inferred' : 'rule';
     const id = `q-${kind}-${fact.id}`;
     const qualification: Qualification = {
@@ -189,16 +191,19 @@ function qualifyOne(candidate: Candidate, facts: Fact[], allDocs: Doc[], index: 
       kind,
       factId: fact.id,
       question,
-      proposed: decisionValue(kind, answer),
+      proposed: decisionValue(kind, resolvedAnswer),
       yes: template.yes,
       no: template.no,
       source,
-      confidence: answer.confidence,
-      rule: kind === 'writ_outcome' ? answer.rule || 'art. 857 CPC' : template.rule,
-      reasoning: { en: answer.reasoning_en, fr: answer.reasoning_fr },
+      confidence: resolvedAnswer.confidence,
+      rule: kind === 'writ_outcome'
+        ? resolvedAnswer.rule && resolvedAnswer.rule.length <= 40 ? resolvedAnswer.rule : 'art. 857 CPC'
+        : template.rule,
+      reasoning: { en: resolvedAnswer.reasoning_en, fr: resolvedAnswer.reasoning_fr },
       whatIfLabel: template.whatIf,
       ...(anchors.length ? { anchors } : {}),
       model: options.model,
+      ...(fallback ? { fallback: true } : {}),
     };
     fact.qualification = id;
     return { qualification, usage: result.usage, steps: result.steps };

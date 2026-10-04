@@ -16,6 +16,24 @@ describe('language selection', () => {
   });
 });
 
+describe('AI controls and provenance translations', () => {
+  it('translates sample actions, model attribution and cached fallback copy', () => {
+    expect(fr('Analyse sample case with AI')).toBe('Analyser le dossier exemple avec l’IA');
+    expect(fr('Fresh run (calls the model)')).toBe('Nouvelle analyse (appelle le modèle)');
+    expect(fr('Open hand-checked reference')).toBe('Ouvrir la référence vérifiée manuellement');
+    expect(fr('AI · {provider} {model} · {status}', {
+      provider: 'openai', model: 'gpt-6.1-sol', status: fr('cached'),
+    })).toBe('IA · openai gpt-6.1-sol · en cache');
+    expect(fr('Live analysis unavailable ({message}) — showing the recorded AI analysis from {date}.', {
+      message: 'missing API key', date: '4 oct. 2026',
+    })).toBe('Analyse en direct indisponible (missing API key) — affichage de l’analyse IA enregistrée le 4 oct. 2026.');
+    expect(fr('Extracted by {model}', { model: 'gpt-6.1-sol' })).toBe('Extrait par gpt-6.1-sol');
+    expect(fr('Proposed by {model} · {confidence} confidence', {
+      model: 'gpt-6.1-sol', confidence: fr('medium'),
+    })).toBe('Proposée par gpt-6.1-sol · confiance moyenne');
+  });
+});
+
 describe('bilingual analysis', () => {
   it('preserves every scenario result, date and citation across languages', () => {
     for (let scenario = 0; scenario < 32; scenario++) {

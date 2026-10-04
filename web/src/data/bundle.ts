@@ -30,6 +30,7 @@ export type Qualification = {
   rule: string; reasoning: Text; whatIfLabel: Text;
   anchors?: Anchor[];
   model?: string;
+  fallback?: boolean;
 };
 
 export type CaseProfile = {

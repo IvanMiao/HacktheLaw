@@ -235,6 +235,10 @@ export async function extractCase(docs: IngestedDoc[], index: RetrievalIndex, op
 
   if (!finished || !profile) throw new Error('Extraction agent did not finish with a case profile');
   facts.sort((a, b) => a.date.localeCompare(b.date));
+  const amount = facts.find((fact) => fact.verified && fact.role === 'limitation_start' && fact.attrs.amountEur !== undefined)?.attrs.amountEur;
+  if (amount !== undefined) {
+    profile.amount = `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount).replace(/[\u00a0\u202f]/gu, ' ')} €`;
+  }
   profile.nextHearing = facts
     .filter((fact) => fact.verified && fact.role === 'writ' && fact.attrs.hearingDate && fact.attrs.hearingDate >= options.asOf)
     .map((fact) => fact.attrs.hearingDate!)

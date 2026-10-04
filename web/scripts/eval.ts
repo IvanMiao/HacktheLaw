@@ -84,8 +84,10 @@ function checksFor(bundle: CaseBundle, libraryIds: Set<string>): Check[] {
   const noticeQ = qualification('formal_notice');
   const outcomeQ = qualification('writ_outcome');
   const attemptedQ = qualification('conciliation_attempted');
+  const fallbackKinds = [...new Set(bundle.qualifications.filter((item) => item.fallback).map((item) => item.kind))].sort();
   const qualifications = Boolean(clauseQ?.proposed && acknowledgmentQ?.proposed === false
     && noticeQ?.proposed === false && outcomeQ?.proposed === true && attemptedQ?.proposed === true);
+  const allQualificationsAnswered = qualifications && fallbackKinds.length === 0;
 
   const sample: CaseBundle = { ...SAMPLE_DATA, docs: [] };
   const parity = metric(bundle);
@@ -102,7 +104,7 @@ function checksFor(bundle: CaseBundle, libraryIds: Set<string>): Check[] {
     { name: 'Writ dates', pass: hasWrits, detail: writs.map((fact) => `${fact.attrs.servedAt ?? fact.date} → ${fact.attrs.hearingDate ?? 'no hearing'}`).join('; ') || 'not found' },
     { name: 'First-writ placement link', pass: placement, detail: `${placements.map((fact) => `${fact.attrs.placedAt ?? fact.date} → ${fact.attrs.writFactId ?? 'unlinked'}`).join('; ') || 'not found'}; 15 April placement linked to first writ: ${misplacedSecondWrit}` },
     { name: 'Sanction, clause, exhibits', pass: sanction && clause && exhibits, detail: `sanction ${sanction ? 'ok' : 'missing'}; clause ${clause ? 'contract' : 'missing'}; exhibits ${exhibits ? 'pieces' : 'missing'}` },
-    { name: 'Qualification results', pass: qualifications, detail: `clause ${clauseQ?.proposed}; acknowledgment ${acknowledgmentQ?.proposed}; formal notice ${noticeQ?.proposed}; writ outcome ${outcomeQ?.proposed}; no conciliation attempt ${attemptedQ?.proposed}` },
+    { name: 'Qualification results', pass: allQualificationsAnswered, detail: `clause ${clauseQ?.proposed}; acknowledgment ${acknowledgmentQ?.proposed}; formal notice ${noticeQ?.proposed}; writ outcome ${outcomeQ?.proposed}; no conciliation attempt ${attemptedQ?.proposed}; fallback kinds ${fallbackKinds.join(', ') || 'none'}` },
     { name: 'Engine parity with SAMPLE', pass: parityOkay, detail: `AI ${JSON.stringify(parity)}; SAMPLE ${JSON.stringify(sampleParity)}` },
   ];
 }

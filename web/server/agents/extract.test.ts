@@ -129,4 +129,27 @@ describe('extraction tool validation', () => {
       profile: { side: 'Defendant (Bâtiself SARL)' },
     });
   });
+
+  it('formats a verified limitation amount and keeps the model amount when absent', async () => {
+    const invoice = docs.find((doc) => doc.id === 'invoice')!;
+    const withAmount = fakeClient(async (call) => {
+      await call('set_case_profile', { ...profileArgs, amount: 'model amount' });
+      await call('record_fact', factArgs('limitation_start', {
+        doc_id: invoice.id,
+        date: '2021-03-15',
+        quotes: [invoice.text],
+        amount_eur: 18400,
+      }));
+      await call('record_fact', factArgs('writ'));
+      await call('finish', { notes: '' });
+    });
+    const withoutAmount = fakeClient(async (call) => {
+      await call('set_case_profile', { ...profileArgs, amount: 'model amount' });
+      await call('record_fact', factArgs('writ'));
+      await call('finish', { notes: '' });
+    });
+
+    await expect(extract(withAmount)).resolves.toMatchObject({ profile: { amount: '18 400 €' } });
+    await expect(extract(withoutAmount)).resolves.toMatchObject({ profile: { amount: 'model amount' } });
+  });
 });
