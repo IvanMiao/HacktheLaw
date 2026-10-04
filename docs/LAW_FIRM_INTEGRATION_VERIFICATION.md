@@ -1,6 +1,6 @@
 # Law-firm integration verification handoff
 
-Branch: `feature/law-firm-integrations`, based on `2126ecf`. Local-only delivery; upstream unset. No push/PR/main merge/deployment. Independent parent acceptance remains the next gate.
+Branch: `feature/law-firm-integrations`, based on `2126ecf`. Local-only delivery; upstream unset. No push/PR/main merge/deployment. Parent independent acceptance passed: full regression, real HTTP smoke and browser SQLite import/analysis/export/readback. Parent also fixed silent AI-context truncation with an observed failing regression followed by GREEN; all accepted source text is forwarded.
 
 ## Results actually exercised
 
@@ -8,7 +8,7 @@ Branch: `feature/law-firm-integrations`, based on `2126ecf`. Local-only delivery
 |---|---|
 | Baseline install | `npm ci`: 0 vulnerabilities; Node 25 warning outside Vitest's declared even-LTS engine range |
 | Baseline suite | 24 files / 141 tests passed |
-| Final suite | 32 files / 174 tests passed |
+| Final suite | 32 files / 175 tests passed after parent no-truncation regression |
 | Production build | `npm run build` passed |
 | Server/scripts/integration test typecheck | `npm run typecheck:server` passed |
 | Lint | `npm run lint` passed, no warnings |

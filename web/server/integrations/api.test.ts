@@ -23,5 +23,17 @@ describe('versioned firm API actual HTTP',()=>{
  });
  it('redacts provider errors and preserves last successful export',async()=>{const fetcher=vi.fn(async()=>{throw Error('key1 private server path');});const url=await start({fetcher});await post(url,'/cases',input());const good=await (await post(url,'/cases/firm-1/analyse',{mode:'deterministic'})).json();const failed=await post(url,'/cases/firm-1/analyse',{mode:'ai-review',profileId:'mistral'});expect(failed.status).toBe(502);expect(await failed.text()).not.toContain('key1');expect(await (await fetch(url+'/api/v1/cases/firm-1/export',{headers})).json()).toEqual(good);});
  it('rejects ungrounded AI output and unknown profile before changes',async()=>{const fetcher=vi.fn(async()=>Response.json({choices:[{message:{content:'{"notes":[{"text":"Fake","documentIds":["foreign"]}]}'}}]}));const url=await start({fetcher});await post(url,'/cases',input());expect((await post(url,'/cases/firm-1/analyse',{mode:'ai-review',profileId:'missing'})).status).toBe(404);expect(fetcher).not.toHaveBeenCalled();expect((await post(url,'/cases/firm-1/analyse',{mode:'ai-review',profileId:'mistral'})).status).toBe(502);});
+ it('passes complete accepted document text to AI review without silent truncation',async()=>{
+  const matter=input();const marker='END_OF_FULL_ACCEPTED_DOCUMENT';
+  matter.documents[0].text += ' '.repeat(26000)+marker;
+  let seen='';
+  const fetcher=vi.fn(async(_url:unknown,opts?:RequestInit)=>{
+   seen=JSON.parse(String(opts?.body)).messages.find((m:{role:string})=>m.role==='user').content;
+   return Response.json({choices:[{message:{content:JSON.stringify({notes:[{text:'Test-only review',documentIds:['doc-1']}]})}}]});
+  });
+  const url=await start({fetcher});expect((await post(url,'/cases',matter)).status).toBe(201);
+  expect((await post(url,'/cases/firm-1/analyse',{mode:'ai-review',profileId:'mistral'})).status).toBe(200);
+  expect(seen).toContain(marker);expect(seen.length).toBeGreaterThan(24000);
+ });
  it('returns public metadata and bounded test connection only',async()=>{const fetcher=vi.fn(async()=>Response.json({choices:[{message:{content:'{"ok":true}'}}]}));const url=await start({fetcher});const status=await (await fetch(url+'/api/v1/connections',{headers})).text();expect(status).not.toContain('key1');expect(status).not.toContain('MISTRAL_API_KEY');expect(status).toContain('voxtral');expect((await post(url,'/providers/mistral/test',{})).status).toBe(200);expect(fetcher).toHaveBeenCalledTimes(1);});
 });
