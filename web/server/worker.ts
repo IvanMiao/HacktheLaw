@@ -177,6 +177,9 @@ async function realtime(request: Request, env: Env) {
   const provider = (upstream as Response & { webSocket?: Socket }).webSocket;
   if (!provider) return json(502, { error: 'Mistral realtime unavailable. Check quota and model access.' });
   const pair = new WebSocketPair();
+  // Recent Workers default to Blob; the bridge reads synchronous PCM ArrayBuffers.
+  pair[1].binaryType = 'arraybuffer';
+  provider.binaryType = 'arraybuffer';
   pair[1].accept();
   // Attach protocol listeners before accepting the provider so no handshake event is lost.
   bridgeRealtime(new WorkerSocket(pair[1]), new WorkerSocket(provider));
