@@ -4,6 +4,7 @@ import type { ModelSet, Provider } from './config.js';
 import { configuredProvider, providerConfig } from './config.js';
 import type { InputFile } from './ingest.js';
 import { runCase } from './pipeline.js';
+import { createIntegrationHandler } from './integrations/api.js';
 
 const MAX_BODY = 25 * 1024 * 1024;
 
@@ -131,13 +132,17 @@ function middleware(request: IncomingMessage, response: ServerResponse, next: (e
 }
 
 export function dominoApi(): Plugin {
+  const integrations = createIntegrationHandler();
+  const combined = (request: IncomingMessage, response: ServerResponse, next: (error?: unknown) => void) => {
+    void integrations(request, response).then((handled) => { if (!handled) middleware(request, response, next); }).catch(next);
+  };
   return {
     name: 'domino-api',
     configureServer(server) {
-      server.middlewares.use(middleware);
+      server.middlewares.use(combined);
     },
     configurePreviewServer(server) {
-      server.middlewares.use(middleware);
+      server.middlewares.use(combined);
     },
   };
 }

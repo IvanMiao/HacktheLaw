@@ -19,11 +19,14 @@ import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
 import { SourceViewer } from './components/SourceViewer';
 import { StartScreen } from './components/StartScreen';
+import { Connections, ConnectionsButton } from './components/Connections';
+import { isFirmImport } from './integrations/provenance';
 
 type Mode = 'facts' | 'chains' | 'memo';
 const MODES: [Mode, string][] = [['facts', 'Facts'], ['chains', 'Chains'], ['memo', 'Memo']];
 
 export default function App() {
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [caseId, setCaseId] = useState<CaseId>(() => {
     const requested = new URLSearchParams(location.search).get('case');
     return PRESETS.find((preset) => preset.id === requested)?.id as CaseId ?? 'c1-c2';
@@ -44,7 +47,9 @@ export default function App() {
     setCaseId(nextCaseId);
     setBundle(next);
   };
-  return <BundleProvider bundle={bundle}><AppContent
+  return <BundleProvider bundle={bundle}>
+    {connectionsOpen && <Connections onClose={() => setConnectionsOpen(false)} onView={(next) => { switchBundle(next); setHasLoaded(true); setConnectionsOpen(false); }} />}
+    <AppContent
     key={bundle.id}
     onBundle={switchBundle}
     initialReady={hasLoaded || !!bundle.preset}
@@ -53,10 +58,11 @@ export default function App() {
     onFallback={setFallbackMessage}
     onClearFallback={() => setFallbackMessage('')}
     activeCase={activeCase}
+    onConnections={() => setConnectionsOpen(true)}
   /></BundleProvider>;
 }
 
-function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback, activeCase }: {
+function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallback, onClearFallback, activeCase, onConnections }: {
   onBundle: (bundle: CaseBundle) => void;
   initialReady: boolean;
   onLoaded: () => void;
@@ -64,6 +70,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
   onFallback: (message: string) => void;
   onClearFallback: () => void;
   activeCase: CaseSession;
+  onConnections: () => void;
 }) {
   const { bundle, docs, factOf } = useBundle();
   const caseToken = activeCase.identity();
@@ -100,7 +107,9 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
 
   const analysis = useMemo(() => analyse(bundle, state, t), [bundle, state, t]);
   const cfs = useMemo(() => counterfactuals(bundle, state, t), [bundle, state, t]);
-  const provenance = bundle.provider && bundle.models?.agent
+  const provenance = isFirmImport(bundle)
+    ? (locale === 'fr' ? 'Import du cabinet · validation requise' : 'Firm import · review required')
+    : bundle.provider && bundle.models?.agent
     ? t('AI · {provider} {model} · {status}', {
       provider: bundle.provider,
       model: bundle.models.agent,
@@ -210,6 +219,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
       onError={(message) => { setStartError(message); setStage('start'); }}
       onBundle={onBundle}
       onFallback={onFallback}
+      onConnections={onConnections}
       onReference={() => { setStartError(''); onClearFallback(); setStage('ready'); setHome(false); onBundle(SAMPLE); }}
     />;
   }
@@ -243,6 +253,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           ))}
         </nav>
         {trace.length > 0 && <button className="btn trace-toggle" aria-expanded={traceOpen} onClick={() => setTraceOpen((open) => !open)}>{t('Trace')}</button>}
+        <ConnectionsButton onClick={onConnections} />
         <LanguageSwitch />
         <details className="case-context">
           <summary aria-label={t('Case details')} title={t('Case details')}>ⓘ</summary>
@@ -270,7 +281,7 @@ function AppContent({ onBundle, initialReady, onLoaded, fallbackMessage, onFallb
           ? t('{count} active procedural consequences · {chains} enabled chains · legal review required', { count: grounds, chains: analysis.chains.length })
           : grounds ? t(grounds === 1 ? '{count} independent ground for inadmissibility' : '{count} independent grounds for inadmissibility', { count: grounds })
           : pendingReviews > 0 ? t('Grounds awaiting verification') : t('No ground found in the {count} enabled chains', { count: analysis.chains.length })}</strong>
-        {pendingAi > 0 ? <span className="banner-secondary b-prov">{t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
+        {pendingAi > 0 ? <span className="banner-secondary b-prov">{isFirmImport(bundle) ? (locale === 'fr' ? `${pendingAi} propositions importées à valider` : `${pendingAi} imported proposals pending review`) : t('Provisional · {count} AI review pending', { count: pendingAi })}</span>
           : contestedLinks > 0 && <span className="banner-secondary">{t(contestedLinks === 1 ? '{count} contested link' : '{count} contested links', { count: contestedLinks })}</span>}
         {pendingReviews > 0 && <span className="banner-secondary">{t('{count} interpretation(s) to verify', { count: pendingReviews })}</span>}
         {hasReviews(state) && <span className="banner-secondary"><button className="linkish" onClick={resetReviewState}>{t('Reset reviews')}</button></span>}

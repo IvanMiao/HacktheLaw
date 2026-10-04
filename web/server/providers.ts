@@ -28,6 +28,10 @@ export type FileInput = { name: string; mime: string; base64: string };
 
 type ProviderResponse = Record<string, any>;
 type ProviderOptions = {
+  apiKey?: string;
+  baseUrl?: string;
+  maxRequests?: number;
+  retryTries?: number;
   fetcher?: typeof fetch;
   mistralRpm?: number;
   sleep?: (ms: number) => Promise<void>;
@@ -164,8 +168,11 @@ export function createLlmClient(provider: 'openai' | 'mistral', options: Provide
 } {
   const fetcher = options.fetcher ?? fetch;
   const sleep = options.sleep ?? wait;
-  const mistralKey = process.env.MISTRAL_API_KEY;
-  const openAiKey = process.env.OPENAI_API_KEY;
+  const mistralKey = provider === 'mistral' ? options.apiKey ?? process.env.MISTRAL_API_KEY : process.env.MISTRAL_API_KEY;
+  const openAiKey = provider === 'openai' ? options.apiKey ?? process.env.OPENAI_API_KEY : process.env.OPENAI_API_KEY;
+  const mistralUrl = provider === 'mistral' ? options.baseUrl ?? MISTRAL_URL : MISTRAL_URL;
+  const openAiUrl = provider === 'openai' ? options.baseUrl ?? OPENAI_URL : OPENAI_URL;
+  let requests = 0;
   const configuredRpm = options.mistralRpm ?? Number(process.env.DOMINO_MISTRAL_RPM ?? 25);
   const rpm = Number.isFinite(configuredRpm) && configuredRpm > 0 ? configuredRpm : 25;
   const takeMistralToken = tokenBucket(rpm, Date.now, sleep);
@@ -173,11 +180,15 @@ export function createLlmClient(provider: 'openai' | 'mistral', options: Provide
 
   const request = async (url: string, key: string | undefined, body: ProviderResponse, limit = false, signal?: AbortSignal) => {
     if (!key) throw new Error(`${url.includes('mistral') ? 'MISTRAL_API_KEY' : 'OPENAI_API_KEY'} is required`);
-    for (let attempt = 0; attempt < RETRY_TRIES; attempt++) {
+    const tries = options.retryTries ?? RETRY_TRIES;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      if (requests >= (options.maxRequests ?? Infinity)) throw new Error('Provider request budget exhausted');
+      requests++;
       if (signal?.aborted) throw signal.reason ?? new DOMException('Aborted', 'AbortError');
       if (limit) await takeMistralToken(signal);
       const response = await fetcher(url, {
         method: 'POST',
+        redirect: 'error',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         ...(signal ? { signal } : {}),
@@ -185,7 +196,7 @@ export function createLlmClient(provider: 'openai' | 'mistral', options: Provide
       if (response.ok) return response.json() as Promise<ProviderResponse>;
       const detail = await response.text();
       const retryable = response.status === 429 || response.status >= 500;
-      if (!retryable || attempt === RETRY_TRIES - 1) {
+      if (!retryable || attempt === tries - 1) {
         throw new Error(`${url.includes('mistral') ? 'Mistral' : 'OpenAI'} request failed (${response.status}): ${detail}`);
       }
       const retryAfter = response.status === 429 ? retryAfterMs(response.headers.get('retry-after')) : undefined;
@@ -195,9 +206,9 @@ export function createLlmClient(provider: 'openai' | 'mistral', options: Provide
   };
 
   const chat = (body: ProviderResponse, signal?: AbortSignal) =>
-    request(`${MISTRAL_URL}/chat/completions`, mistralKey, body, true, signal);
+    request(`${mistralUrl}/chat/completions`, mistralKey, body, true, signal);
   const responses = (body: ProviderResponse, signal?: AbortSignal) =>
-    request(`${OPENAI_URL}/responses`, openAiKey, body, false, signal);
+    request(`${openAiUrl}/responses`, openAiKey, body, false, signal);
 
   const client: LlmClient & {
     ocr: (file: FileInput, model: string, prompt: string, signal?: AbortSignal) => Promise<{ text: string; usage: Usage }>;

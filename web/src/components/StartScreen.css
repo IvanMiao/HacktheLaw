@@ -12,6 +12,8 @@
   background: radial-gradient(1200px 520px at 50% -10%, rgba(21, 21, 21, .035), transparent 70%), var(--landing-bg);
 }
 .landing-top { width: 100%; max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.landing-actions { display: flex; align-items: center; gap: 10px; }
+.landing-actions .connections-toggle { height: 40px; padding: 0 14px; border-radius: 10px; background: var(--card); font-size: 13px; }
 .landing-eyebrow { display: flex; align-items: center; gap: 8px; color: var(--landing-quiet); font: 12px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .landing-eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: #1f7a45; box-shadow: 0 0 0 3px #1f7a452b; }
 .landing .language-switch { padding: 3px; border-radius: 10px; background: #fff; border-color: var(--landing-line); }
