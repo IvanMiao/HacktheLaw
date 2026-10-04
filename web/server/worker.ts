@@ -5,7 +5,8 @@ import { library, sampleDocs } from '#domino-data';
 import { configuredProvider, providerConfig } from './config.js';
 import { runCase, type CaseInput } from './pipeline.js';
 import { createHandler } from './voice-api.js';
-import { bridgeRealtime, REALTIME_MODEL } from './realtime-bridge.js';
+import { bridgeRealtime } from './realtime-bridge.js';
+import { fetchRealtimeUpgrade } from './realtime-upgrade.js';
 import type { IngestedDoc } from './ingest.js';
 import cachedSample from '../../data/sample-case/ai-bundle.json';
 
@@ -171,9 +172,7 @@ async function realtime(request: Request, env: Env) {
   if (request.method !== 'GET' || request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return json(426, { error: 'WebSocket upgrade required.' });
   if (!request.headers.get('origin') || new URL(request.url).search) return json(403, { error: 'Origin or route not allowed.' });
   if (!env.MISTRAL_API_KEY) return json(503, { error: 'Mistral is not configured.' });
-  const upstream = await fetch(`https://api.mistral.ai/v1/audio/transcriptions/realtime?model=${REALTIME_MODEL}`, {
-    headers: { Upgrade: 'websocket', Authorization: `Bearer ${env.MISTRAL_API_KEY}` }, signal: AbortSignal.timeout(10_000),
-  });
+  const upstream = await fetchRealtimeUpgrade(env.MISTRAL_API_KEY);
   const provider = (upstream as Response & { webSocket?: Socket }).webSocket;
   if (!provider) return json(502, { error: 'Mistral realtime unavailable. Check quota and model access.' });
   const pair = new WebSocketPair();
