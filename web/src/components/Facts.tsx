@@ -1,9 +1,11 @@
 import { useLocale } from '../i18n/useLocale';
 import { FACTS, qualById, type Anchor, type Fact } from '../data/case';
 import { docById } from '../data/documents';
-import { value, type Analysis, type AnalysisState, type Counterfactual, type Decision } from '../engine/chains';
+import { value, type Analysis, type AnalysisState, type Decision, type ReviewEntry } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
+import { ReviewPanel } from './ReviewPanel';
+import { REVIEW_LABELS } from '../data/review';
 
 function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
   const { t } = useLocale();
@@ -11,12 +13,11 @@ function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
   const v = value(state, qid);
   const d = state.decisions[qid];
   const whatIf = qid in state.whatIf;
-  const ai = q.source === 'ai_inferred' && d === 'proposed' && !whatIf;
+  const ai = d === 'unreviewed' && !whatIf;
   return (
-    <span className={`qbadge ${ai ? 'ai' : ''} ${whatIf ? 'whatif' : ''}`}>
+    <span className={`qbadge review-${d} ${ai ? 'ai' : ''} ${whatIf ? 'whatif' : ''}`}>
       {whatIf ? t('What-if: ') : ''}{t(v ? q.yes : q.no)}
-      {d === 'confirmed' && !whatIf && <span className="tick" aria-label={t('confirmed')}> ✓</span>}
-      {d === 'rejected' && !whatIf && <span className="cross" aria-label={t('rejected')}> ✕</span>}
+      {!whatIf && <span className="review-badge-label"> · {t(REVIEW_LABELS[d])}</span>}
     </span>
   );
 }
@@ -43,15 +44,15 @@ export function FactList({ state, selected, onSelect }: { state: AnalysisState; 
 }
 
 type DetailProps = {
-  fact: Fact; state: AnalysisState; analysis: Analysis; cfs: Counterfactual[];
+  fact: Fact; state: AnalysisState; analysis: Analysis;
   onDecide: (qid: string, d: Decision) => void; onAnchor: (a: Anchor) => void; onOpenLink: (id: string) => void;
+  onEditReview: (qid: string, review: ReviewEntry) => void; onMemo: () => void;
+  onPreview: (qid: string, value: boolean) => void; onExitPreview: () => void;
 };
 
-export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onOpenLink }: DetailProps) {
+export function FactDetail({ fact, state, analysis, onDecide, onAnchor, onOpenLink, onEditReview, onMemo, onPreview, onExitPreview }: DetailProps) {
   const { t } = useLocale();
   const q = fact.qualification ? qualById(fact.qualification) : undefined;
-  const decision = q && state.decisions[q.id];
-  const cf = q && cfs.find((c) => c.qid === q.id);
   const quotes = new Set(fact.anchors.map((a) => a.quote));
   const usedIn = analysis.chains.flatMap((c) =>
     c.links.filter((l) => l.anchors.some((a) => quotes.has(a.quote)) || (q && l.deps.includes(q.id))).map((l) => ({ chain: c.id, link: l })));
@@ -79,19 +80,15 @@ export function FactDetail({ fact, state, analysis, cfs, onDecide, onAnchor, onO
           <p className="reasoning">{t(q.reasoning)}</p>
           <p className="muted small">{t('Basis:')} {t(q.rule)}</p>
           {fact.id === 'f4' && <div className="callout neutral"><strong>{t('Does not interrupt.')}</strong> {t('A common misconception: an ordinary mise en demeure leaves the limitation date unchanged.')}</div>}
-          <div className="actions">
-            <button className={`btn ${decision === 'confirmed' ? 'primary' : ''}`} onClick={() => onDecide(q.id, decision === 'confirmed' ? 'proposed' : 'confirmed')}>
-              {decision === 'confirmed' ? t('Confirmed ✓') : t('Confirm')} <kbd>C</kbd>
-            </button>
-            <button className={`btn ${decision === 'rejected' ? 'danger' : ''}`} onClick={() => onDecide(q.id, decision === 'rejected' ? 'proposed' : 'rejected')}>
-              {decision === 'rejected' ? t('Rejected ✕') : t('Reject')} <kbd>R</kbd>
-            </button>
-            {cf && cf.effects.length > 0 && (
-              <span className="impact">{t('If')} {t(decision === 'rejected' ? 'restored' : 'rejected')} : {cf.effects.map((e) => `${t(e.to === 'fails' ? 'breaks' : 'restores')} ${e.chain}`).join(', ')}</span>
-            )}
-          </div>
         </section>
       )}
+
+      {q && <ReviewPanel key={q.id} qualification={q} decision={state.decisions[q.id]}
+        review={state.reviews[q.id] ?? { note: '', nextStep: '' }} preview={Object.keys(state.whatIf).length > 0}
+        onDecide={(decision) => onDecide(q.id, decision)} onEdit={(review) => onEditReview(q.id, review)}
+        onSource={() => onAnchor(fact.anchors[0])} onMemo={onMemo}
+        onArgument={usedIn[0] ? () => onOpenLink(usedIn[0].link.id) : undefined}
+        onPreview={() => onPreview(q.id, !q.proposed)} onExitPreview={onExitPreview} />}
 
       {usedIn.length > 0 && (
         <section>

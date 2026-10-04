@@ -4,24 +4,27 @@ import { addDays, daysBetween, fr } from './dates';
 import { computeLimitation, type LimitationResult } from './limitation';
 import type { RegimeKey } from './regimes';
 
-export type Decision = 'proposed' | 'confirmed' | 'rejected';
+export type Decision = 'unreviewed' | 'supported' | 'unsupported' | 'insufficient';
+export type ReviewEntry = { note: string; nextStep: string };
 
 export type AnalysisState = {
   decisions: Record<string, Decision>;
+  reviews: Record<string, ReviewEntry>;
   /** Counterfactual overrides — never persisted as lawyer decisions. */
   whatIf: Record<string, boolean>;
   art642: boolean;
 };
 
 export const initialState = (): AnalysisState => ({
-  decisions: Object.fromEntries(QUALIFICATIONS.map((q) => [q.id, 'proposed' as Decision])),
+  decisions: Object.fromEntries(QUALIFICATIONS.map((q) => [q.id, q.id === 'q-concil' ? 'insufficient' : 'unreviewed'])),
+  reviews: Object.fromEntries(QUALIFICATIONS.map((q) => [q.id, { note: '', nextStep: '' }])),
   whatIf: {},
   art642: true,
 });
 
 export type NodeKind = 'fact' | 'requirement' | 'breach' | 'sanction' | 'lost_effect' | 'consequence' | 'outcome';
-export type LinkStatus = 'established' | 'contested' | 'broken' | 'not_reached';
-export type ChainStatus = 'holds' | 'contested' | 'fails';
+export type LinkStatus = 'established' | 'contested' | 'unsupported' | 'insufficient' | 'broken' | 'not_reached';
+export type ChainStatus = 'holds' | 'contested' | 'unsupported' | 'insufficient' | 'fails';
 
 export type Link = {
   id: string;
@@ -42,19 +45,23 @@ export type ChainResult = { id: 'C1' | 'C2'; title: string; subtitle: string; li
 
 export type Analysis = { chains: ChainResult[]; limitation: LimitationResult; contestedQuals: string[] };
 
-type Ctx = { v: (q: string) => boolean; isContested: (q: string) => boolean; lim: LimitationResult; t: Translator };
+type Ctx = { v: (q: string) => boolean; review: (q: string) => Decision; lim: LimitationResult; t: Translator };
 
 type LinkDef = Omit<Link, 'status' | 'brokenReason'> & { holds: boolean; brokenReason?: string };
 
 export function value(state: AnalysisState, qid: string): boolean {
   if (qid in state.whatIf) return state.whatIf[qid];
   const q = QUALIFICATIONS.find((x) => x.id === qid)!;
-  return state.decisions[qid] === 'rejected' ? !q.proposed : q.proposed;
+  return q.proposed;
 }
 
 export function isContested(state: AnalysisState, qid: string): boolean {
-  const q = QUALIFICATIONS.find((x) => x.id === qid)!;
-  return q.source === 'ai_inferred' && state.decisions[qid] === 'proposed' && !(qid in state.whatIf);
+  return reviewFor(state, qid) === 'unreviewed';
+}
+
+function reviewFor(state: AnalysisState, qid: string): Decision {
+  // A hypothetical supplies an assumption for this preview, never a saved review.
+  return qid in state.whatIf ? 'supported' : state.decisions[qid] ?? 'unreviewed';
 }
 
 export function limitationFor(state: AnalysisState, t: Translator = english): LimitationResult {
@@ -75,11 +82,24 @@ export function limitationFor(state: AnalysisState, t: Translator = english): Li
 }
 
 function settle(defs: LinkDef[], ctx: Ctx): Link[] {
-  let broken = false;
+  let stopped = false;
+  let provisional = false;
   return defs.map(({ holds, brokenReason, ...l }) => {
-    if (broken) return { ...l, status: 'not_reached' };
-    if (!holds) { broken = true; return { ...l, status: 'broken', brokenReason }; }
-    return { ...l, status: l.deps.some(ctx.isContested) ? 'contested' : 'established' };
+    if (stopped) return { ...l, status: 'not_reached' };
+    const reviews = l.deps.map(ctx.review);
+    const blocker = reviews.includes('unsupported') ? 'unsupported' : reviews.includes('insufficient') ? 'insufficient' : undefined;
+    if (blocker) {
+      stopped = true;
+      return { ...l, status: blocker };
+    }
+    provisional ||= reviews.includes('unreviewed');
+    if (provisional) {
+      // Neither a positive nor a negative result is established by an unreviewed premise.
+      if (!holds) stopped = true;
+      return { ...l, status: 'contested' };
+    }
+    if (!holds) { stopped = true; return { ...l, status: 'broken', brokenReason }; }
+    return { ...l, status: 'established' };
   });
 }
 
@@ -137,22 +157,30 @@ function c2(ctx: Ctx): LinkDef[] {
       rule: t('Cass. ch. mixte, 12 Dec 2014 (exception to art. 126 CPC)'), anchors: [{ doc: 'cass2014', quote: "n'est pas susceptible d'être régularisée par la mise en œuvre de la clause en cours d'instance" }],
       deps: [], holds: true },
     { id: 'c2-out', kind: 'outcome', title: t('Claim inadmissible'), statement: timeBarred ? t('Re-filing after conciliation: already time-barred ({date})', { date: fr(ctx.lim.expiry) }) : t('Re-filing possible until {date}', { date: fr(ctx.lim.expiry) }),
-      rule: t('art. 122 CPC'), anchors: [{ doc: 'cpc', quote: 'Constitue une fin de non-recevoir' }], deps: [], holds: true },
+      rule: t('art. 122 CPC'), anchors: [{ doc: 'cpc', quote: 'Constitue une fin de non-recevoir' }], deps: ['q-email', 'q-notice', 'q-writ1'], holds: true },
   ];
 }
 
-function chainResult(id: ChainResult['id'], title: string, subtitle: string, outcome: string, links: Link[]): ChainResult {
-  const status: ChainStatus = links.some((l) => l.status === 'broken') ? 'fails' : links.some((l) => l.status === 'contested') ? 'contested' : 'holds';
-  const hingesOn = [...new Set(links.flatMap((l) => (l.status === 'contested' ? l.deps : [])))];
+function chainResult(id: ChainResult['id'], title: string, subtitle: string, outcome: string, defs: LinkDef[], ctx: Ctx): ChainResult {
+  const links = settle(defs, ctx);
+  const requiredReviews = [...new Set(defs.flatMap((l) => l.deps))];
+  const hingesOn = requiredReviews.filter((qid) => ctx.review(qid) !== 'supported');
+  const reviews = hingesOn.map(ctx.review);
+  // Review support is distinct from the Boolean result of the provisional calculation.
+  // Include every prerequisite even when an earlier link stops the displayed chain.
+  const status: ChainStatus = reviews.includes('unsupported') ? 'unsupported'
+    : reviews.includes('insufficient') ? 'insufficient'
+    : reviews.includes('unreviewed') ? 'contested'
+    : links.some((l) => l.status === 'broken') ? 'fails' : 'holds';
   return { id, title, subtitle, links, status, outcome, hingesOn };
 }
 
 export function analyse(state: AnalysisState, t: Translator = english): Analysis {
   const lim = limitationFor(state, t);
-  const ctx: Ctx = { v: (q) => value(state, q), isContested: (q) => isContested(state, q), lim, t };
+  const ctx: Ctx = { v: (q) => value(state, q), review: (q) => reviewFor(state, q), lim, t };
   const chains = [
-    chainResult('C1', t('Writ lapse → limitation'), t('Caducité wipes out the interruption; the period ran out'), t('Fin de non-recevoir — time-barred'), settle(c1(ctx), ctx)),
-    chainResult('C2', t('Mandatory prior conciliation'), t('Unimplemented clause, not curable in the proceedings'), t('Fin de non-recevoir — conciliation clause'), settle(c2(ctx), ctx)),
+    chainResult('C1', t('Writ lapse → limitation'), t('Caducité wipes out the interruption; the period ran out'), t('Fin de non-recevoir — time-barred'), c1(ctx), ctx),
+    chainResult('C2', t('Mandatory prior conciliation'), t('Unimplemented clause, not curable in the proceedings'), t('Fin de non-recevoir — conciliation clause'), c2(ctx), ctx),
   ];
   const contestedQuals = [...new Set(chains.flatMap((c) => c.hingesOn))].filter((q) => isContested(state, q));
   return { chains, limitation: lim, contestedQuals };
@@ -168,7 +196,7 @@ export function counterfactuals(state: AnalysisState, t: Translator = english): 
     const alt = analyse({ ...baseState, whatIf: { [q.id]: flipsTo } });
     const effects = alt.chains
       .map((c, i) => ({ chain: c.id, from: base.chains[i].status, to: c.status }))
-      .filter((e) => (e.from === 'fails') !== (e.to === 'fails'));
+      .filter((e) => e.from !== e.to);
     return { qid: q.id, label: t(q.whatIfLabel), flipsTo, active: q.id in state.whatIf, effects };
   });
 }

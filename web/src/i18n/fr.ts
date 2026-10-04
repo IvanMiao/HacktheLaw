@@ -1,5 +1,8 @@
+import { reviewFrench } from './review.fr';
+
 // Original source documents and citation quotes are deliberately preserved.
 export const french: Record<string, string> = {
+  ...reviewFrench,
   "Domino — procedural consequence chains": "Domino — chaînes de conséquences procédurales",
   "Language": "Langue",
   "Facts": "Faits",

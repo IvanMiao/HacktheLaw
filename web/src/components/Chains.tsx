@@ -6,13 +6,14 @@ import { REGIMES } from '../engine/regimes';
 import { DeadlineTrack } from './DeadlineTrack';
 import { Pips } from './Glyphs';
 import { SourceChip } from './SourceChip';
+import { qualById } from '../data/case';
 
 const KIND: Record<NodeKind, string> = {
   fact: 'Fact', requirement: 'Requirement', breach: 'Breach', sanction: 'Sanction',
   lost_effect: 'Lost effect', consequence: 'Consequence', outcome: 'Outcome',
 };
 
-const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken' };
+const STATUS: Record<ChainStatus, string> = { holds: 'Supported potential ground', contested: 'Review pending', fails: 'Chain broken', unsupported: 'Blocked — unsupported', insufficient: 'Pending — insufficient evidence' };
 
 export function StatusPill({ status }: { status: ChainStatus }) {
   const { t } = useLocale();
@@ -22,9 +23,10 @@ export function StatusPill({ status }: { status: ChainStatus }) {
 type Props = {
   analysis: Analysis; cfs: Counterfactual[]; state: AnalysisState; linkId: string | null;
   onLink: (id: string | null) => void; onWhatIf: (qid: string, v: boolean) => void; on642: () => void; onReset: () => void; onAnchor: (a: Anchor) => void;
+  onReview: (qid: string) => void;
 };
 
-export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
+export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor, onReview }: Props) {
   const { t } = useLocale();
   const selected = analysis.chains.flatMap((c) => c.links).find((l) => l.id === linkId);
   const anyWhatIf = Object.keys(state.whatIf).length > 0;
@@ -33,7 +35,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
       <section className="stress">
         <div className="stress-head">
           <span className="section-label">{t('Stress-test')}</span>
-          <span className="muted small">{t('Flip a contested link and watch the dominoes.')}</span>
+          <span className="muted small">{t('Preview another interpretation without changing your saved review.')}</span>
           {anyWhatIf && <button className="linkish small" onClick={onReset}>{t('Reset scenario')}</button>}
         </div>
         <div className="toggles">
@@ -42,7 +44,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
               <input type="checkbox" checked={c.active} onChange={() => onWhatIf(c.qid, c.flipsTo)} />
               <span className="switch" aria-hidden />
               <span>{c.label}</span>
-              {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
+              {c.effects.map((e) => <span key={e.chain} className="effect">{e.chain}: {t(STATUS[e.to])}</span>)}
             </label>
           ))}
           <label className={`toggle ${state.art642 ? 'on' : ''}`}>
@@ -54,17 +56,18 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
         </div>
       </section>
 
-      {analysis.chains.map((c) => <Lane key={c.id} chain={c} selected={linkId} onLink={onLink} />)}
+      {anyWhatIf && <div className="callout neutral" role="status">{t('Hypothetical preview — your saved review is unchanged.')}</div>}
+      {analysis.chains.map((c) => <Lane key={c.id} chain={c} selected={linkId} onLink={onLink} onReview={onReview} />)}
 
-      {selected ? <LinkDrawer link={selected} analysis={analysis} onAnchor={onAnchor} onClose={() => onLink(null)} />
+      {selected ? <LinkDrawer link={selected} analysis={analysis} state={state} onAnchor={onAnchor} onClose={() => onLink(null)} onReview={onReview} />
         : <p className="hint muted small">{t('Select a domino to see its rule, inputs and sources.')}</p>}
     </div>
   );
 }
 
-function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
+function Lane({ chain, selected, onLink, onReview }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void; onReview: (qid: string) => void }) {
   const { t } = useLocale();
-  const standing = chain.status !== 'fails';
+  const standing = chain.status === 'holds';
   const broken = chain.links.find((l) => l.status === 'broken');
   return (
     <section className={`lane lane-${chain.status}`}>
@@ -94,7 +97,8 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
                   <span>{l.statement}</span>
                 </span>
                 <span className="tile-foot">
-                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span>
+                  {l.status === 'contested' ? <span className="ai-tag">{t('Review pending')}</span>
+                    : l.status === 'unsupported' || l.status === 'insufficient' ? <span>{t(l.status === 'unsupported' ? 'Unsupported' : 'Insufficient')}</span>
                     : l.status === 'broken' ? <span className="breaks">{t('Breaks here')}</span>
                     : <span className="mono">{l.rule ?? t(l.anchors.length === 1 ? '{count} source' : '{count} sources', { count: l.anchors.length })}</span>}
                 </span>
@@ -104,11 +108,15 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
         })}
       </ol>
       {broken?.brokenReason && <p className="lane-note"><span className="sev">✂</span> {broken.title}: {broken.brokenReason}</p>}
+      {chain.hingesOn.length > 0 && <div className="chain-review-actions">
+        <span className="section-label">{t('Review required')}</span>
+        {chain.hingesOn.map((qid) => <button className="linkish small" key={qid} onClick={() => onReview(qid)}>{t(qualById(qid).question)}</button>)}
+      </div>}
     </section>
   );
 }
 
-function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysis: Analysis; onAnchor: (a: Anchor) => void; onClose: () => void }) {
+function LinkDrawer({ link, analysis, state, onAnchor, onClose, onReview }: { link: Link; analysis: Analysis; state: AnalysisState; onAnchor: (a: Anchor) => void; onClose: () => void; onReview: (qid: string) => void }) {
   const { t } = useLocale();
   const regime = link.regime && REGIMES[link.regime];
   return (
@@ -132,7 +140,11 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
         <div>
           {link.status === 'broken' && link.brokenReason && <div className="callout green"><strong>{t('Chain breaks here.')}</strong> {link.brokenReason}</div>}
           {link.contrast && <div className="callout neutral"><strong>{t('Regime contrast.')}</strong> {link.contrast}</div>}
-          {link.status === 'contested' && <div className="callout violet"><strong>{t('Contested.')}</strong> {t('Depends on an AI-inferred qualification awaiting lawyer review.')}</div>}
+          {link.status === 'contested' && <div className="callout violet"><strong>{t('Review pending')}</strong> {t('A required assessment has not yet been reviewed.')}</div>}
+          {(link.status === 'unsupported' || link.status === 'insufficient' || link.status === 'not_reached') && <div className="callout neutral">
+            {t('This step is not established. Resolve the required reviews before relying on its conclusion.')}
+          </div>}
+          {link.deps.map((qid) => <p key={qid}><button className="linkish small" onClick={() => onReview(qid)}>{t(qualById(qid).question)}</button></p>)}
         </div>
       </div>
       {regime && (
@@ -144,6 +156,7 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
       {link.kind === 'consequence' && (
         <div className="deadline">
           <div className="section-label">{t('Limitation calculation')}</div>
+          {['q-email', 'q-notice', 'q-writ1'].some((qid) => state.decisions[qid] !== 'supported' && !(qid in state.whatIf)) && <p className="callout neutral">{t('Provisional calculation from suggested interpretations. Required reviews are still unresolved.')}</p>}
           <DeadlineTrack lim={analysis.limitation} />
           <ol className="steps">
             {analysis.limitation.steps.map((s, i) => (

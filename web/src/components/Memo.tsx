@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useLocale } from '../i18n/useLocale';
 import type { Anchor } from '../data/case';
 import { DOCS, docById } from '../data/documents';
-import { isContested, type Analysis, type AnalysisState } from '../engine/chains';
+import { type Analysis, type AnalysisState } from '../engine/chains';
 import { buildMemo, toMd, type Part } from '../engine/memo';
 import { SourceChip } from './SourceChip';
 
@@ -12,13 +12,13 @@ export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state:
   const [copied, setCopied] = useState(false);
   const cited = [...new Set(blocks.flatMap((x) => x.parts.filter((p): p is Anchor => typeof p !== 'string').map((p) => p.doc)))];
   const render = (parts: Part[]): ReactNode[] => parts.map((p, i) => (typeof p === 'string' ? p : <SourceChip key={i} anchor={p} onAnchor={onAnchor} />));
-  const pending = analysis.contestedQuals.filter((q) => isContested(state, q)).length;
+  const pending = Object.values(state.decisions).filter((decision) => decision !== 'supported').length;
 
   return (
     <div className="memo">
       <div className="memo-bar">
         <span className="ai-tag">{t('Draft')}</span>
-        <span className="muted small">{t('Generated from the confirmed analysis')}{pending ? t(' · {count} qualification(s) still provisional', { count: pending }) : ''}{t('. In production the prose is drafted by Mistral, restricted to cited sources.')}</span>
+        <span className="muted small">{t('Includes review statuses, notes and next actions')}{pending ? t(' · {count} assessment(s) not supported', { count: pending }) : ''}</span>
         <button className="btn" onClick={() => { navigator.clipboard?.writeText(toMd(blocks, t)); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? t('Copied') : t('Copy Markdown')}</button>
       </div>
       <article className="memo-doc">
@@ -31,7 +31,7 @@ export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state:
           if (x.t === 'note') return <p key={i} className="note">{c}</p>;
           return <p key={i}>{c}</p>;
         })}
-        <h2>5. Sources</h2>
+        <h2>{t('5. Sources')}</h2>
         {cited.map((d) => <p key={d} className="li">{docById(d).title}{docById(d).provenance === 'mock' && docById(d).group !== 'case' ? t(' — mock, to replace') : ''}</p>)}
         <p className="muted small">{t('{count} documents in the file.', { count: DOCS.length })}</p>
       </article>

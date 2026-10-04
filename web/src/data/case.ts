@@ -80,10 +80,10 @@ export const QUALIFICATIONS: Qualification[] = [
     source: 'rule', confidence: 'high', rule: 'art. 857 CPC',
     reasoning: 'The order of 20/02/2026 expressly records the caducité of the writ, on the basis of art. 857 CPC.',
     whatIfLabel: 'Writ #1 was annulled, not lapsed' },
-  { id: 'q-concil', factId: 'f9', question: 'Was conciliation attempted before the writ?',
-    proposed: true, yes: 'No attempt on file', no: 'Conciliation attempted beforehand',
-    source: 'rule', confidence: 'medium', rule: 'Required document not found',
-    reasoning: 'None of the 6 exhibits, nor any other document in the file, records a referral to a conciliator.',
+  { id: 'q-concil', factId: 'f9', question: 'Was the required prior conciliation omitted?',
+    proposed: true, yes: 'Prior conciliation omitted', no: 'Conciliation attempted beforehand',
+    source: 'ai_inferred', confidence: 'low', rule: 'Requires evidence beyond the exhibit list',
+    reasoning: 'The exhibit list contains no conciliation record. This alone cannot establish that conciliation did not occur; obtain the referral history before supporting this assessment.',
     whatIfLabel: 'Conciliation was attempted before the writ' },
 ];
 
