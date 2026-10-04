@@ -1,0 +1,18 @@
+.case-picker { position: relative; width: min(100%, 370px); min-width: 0; }
+.case-picker-trigger { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); text-align: left; transition: border-color .2s, background .2s, box-shadow .2s; }
+.case-picker-trigger:hover, .case-picker-trigger[aria-expanded='true'] { border-color: var(--line-2); background: var(--card); box-shadow: 0 2px 8px #0000000c; }
+.case-picker-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.case-picker-code { flex: none; padding: 2px 5px; border: 1px solid var(--line-2); border-radius: 4px; color: var(--muted); font: 600 10px/1.2 var(--mono); letter-spacing: .04em; }
+.case-picker-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.case-picker-chevron { flex: none; margin-left: auto; color: var(--muted); transition: transform .2s; }
+.case-picker-trigger[aria-expanded='true'] .case-picker-chevron { transform: rotate(180deg); }
+.case-picker-menu { position: absolute; z-index: 30; top: calc(100% + 7px); left: 0; width: min(360px, calc(100vw - 24px)); max-height: min(380px, calc(100vh - 100px)); overflow: auto; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 16px 38px #15151524; animation: case-picker-in .18s ease-out; }
+.case-picker-option { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 8px; text-align: left; }
+.case-picker-option:hover, .case-picker-option:focus-visible { outline: none; background: var(--paper); }
+.case-picker-option[aria-checked='true'] { background: var(--paper); }
+.case-picker-option-code { flex: none; min-width: 50px; color: var(--muted); font: 600 11px var(--mono); letter-spacing: .04em; }
+.case-picker-option-title { min-width: 0; flex: 1; font-size: 13px; overflow-wrap: anywhere; }
+.case-picker-check { width: 16px; flex: none; color: var(--green); font-weight: 700; }
+@keyframes case-picker-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (max-width: 640px) { .case-picker { width: 100%; } .case-picker-trigger { padding: 6px 8px; } .case-picker-menu { width: min(360px, calc(100vw - 20px)); } }
+@media (prefers-reduced-motion: reduce) { .case-picker-menu { animation: none; } .case-picker-chevron { transition: none; } }
