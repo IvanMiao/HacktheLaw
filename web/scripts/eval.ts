@@ -70,9 +70,9 @@ function checksFor(bundle: CaseBundle, libraryIds: Set<string>): Check[] {
   const misplacedSecondWrit = placements.some((fact) =>
     (fact.attrs.placedAt ?? fact.date) === '2026-04-15' && fact.attrs.writFactId === firstWrit?.id,
   );
-  const placement = placements.some((fact) =>
-    (fact.attrs.placedAt ?? fact.date) === '2026-02-16' && fact.attrs.writFactId === firstWrit?.id,
-  ) && !misplacedSecondWrit;
+  const placement = Boolean(firstWrit && placements.some((fact) =>
+    (fact.attrs.placedAt ?? fact.date) === '2026-02-16' && fact.attrs.writFactId === firstWrit.id,
+  )) && !misplacedSecondWrit;
   const sanction = role('writ_sanction').some((fact) =>
     fact.date === '2026-02-20' && fact.attrs.writFactId === firstWrit?.id,
   );
