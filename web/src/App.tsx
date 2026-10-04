@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChainsView } from './components/Chains';
+import { VoicePanel } from './components/VoicePanel';
+import { buildContext, applyIntent, describeIntent } from './voice/commands';
+import { validateIntent, type Intent } from './voice/contract';
 import { FactDetail, FactList } from './components/Facts';
 import { Logo } from './components/Glyphs';
 import { Memo } from './components/Memo';
@@ -63,6 +66,28 @@ export default function App() {
     if (l?.anchors[0]) showAnchor(l.anchors[0]);
   };
 
+  const voiceContext = useMemo(() => buildContext(state), [state]);
+  const latestState = useRef(state);
+  useEffect(() => { latestState.current = state; }, [state]);
+  const runVoiceIntent = (raw: Intent): string => {
+    const current = latestState.current;
+    const intent = validateIntent(raw, buildContext(current));
+    const next = applyIntent(current, intent);
+    if (next !== current) setState(s => applyIntent(s, intent));
+    if (intent.action === 'preview_scenario' || intent.action === 'challenge_defence') setMode('chains');
+    if (intent.action === 'show_mode') setMode(intent.target as Mode);
+    if (intent.action === 'explain_link') {
+      const chain = analysis.chains.find(c => c.id === intent.target);
+      openLink(chain?.links[0].id ?? intent.target);
+    }
+    if (intent.action === 'show_evidence') {
+      const found = [...FACTS.flatMap(f => f.anchors), ...analysis.chains.flatMap(c => c.links.flatMap(l => l.anchors))].find(a => a.doc === intent.target);
+      if (found) showAnchor(found);
+      else { setDocId(intent.target!); setAnchor(null); setViewerOpen(true); }
+    }
+    return describeIntent(next, intent);
+  };
+
   useEffect(() => {
     if (stage !== 'ready') return;
     const onKey = (e: KeyboardEvent) => {
@@ -116,6 +141,8 @@ export default function App() {
         {whatIf && <span className="b-whatif">· What-if scenario <button className="linkish" onClick={() => setState((s) => ({ ...s, whatIf: {} }))}>reset</button></span>}
         <span className="b-right mono">Next hearing {long(CASE.nextHearing)} · in {daysBetween(CASE.asOf, CASE.nextHearing)} days</span>
       </div>
+
+      <VoicePanel context={voiceContext} onIntent={runVoiceIntent} />
 
       <div className="body">
         {mode !== 'chains' && <aside className="col left"><FactList state={state} selected={factId} onSelect={(id) => { selectFact(id); if (mode !== 'facts') setMode('facts'); }} /></aside>}
