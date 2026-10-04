@@ -1,6 +1,6 @@
-# HacktheLaw — ProcGuard
+# HacktheLaw — ClaimClock
 
-Verifiable AI for French criminal procedure. Mistral x Law hackathon.
+Verifiable limitation-period analysis for French civil litigation. Mistral x Law hackathon.
 
 - [Idea](docs/IDEA.md)
 - [Product Requirements (PRD)](docs/PRD.md)

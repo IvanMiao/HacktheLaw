@@ -1,45 +1,49 @@
-# ProcGuard — Find the procedural flaw. Trace what falls with it.
+# ClaimClock — Is this claim still alive?
 
 ## Problem
 
-French criminal case files are hundreds of pages of procès-verbaux, often badly scanned. A defence lawyer's strongest lever is a **procedural nullity**: a search before consent or JLD authorisation, a late notice to the prosecutor, a custody extension without authorisation, a wiretap without a judge's order.
+Before filing a civil or commercial claim in France, a lawyer must know whether it is time-barred. Missing a deadline means a *fin de non-recevoir*: dismissal without the merits ever being heard — and one of the most common sources of professional liability claims against lawyers.
 
-Two things are hard and slow:
+The limitation date is rarely "due date + 5 years". It depends on events buried in emails and letters:
 
-1. **Spotting** the flaw buried in the timeline.
-2. **Proving what depends on it.** Under art. 174 CPP, annulment extends only to acts for which the void act was the *support nécessaire*.
+- an **acknowledgment of the debt** restarts the clock (art. 2240 C. civ.);
+- **mediation** pauses it (art. 2238);
+- a plain **formal notice does not interrupt it** — a common mistake.
 
-Generic LLMs summarise smoothly and hallucinate. In criminal defence, that is unacceptable.
+Meanwhile, the defendant may have entered insolvency proceedings. Suing is then barred (art. L622-21 C. com.), and the claim must be declared within 2 months of the BODACC publication.
+
+Generic LLMs give confident dates without showing their reasoning. Lawyers cannot rely on that.
 
 ## Solution
 
-A web app that turns a case file into a verifiable procedural graph.
+A web app that turns a client file into a verifiable deadline analysis.
 
-1. **Extract** — OCR + structured outputs pull events, timestamps, actors, authorisations, seized items and PV cross-references. Every fact links to its exact page and passage; anything we cannot anchor is flagged *Unverified*.
-2. **Check** — a small deterministic rule engine (3–4 CPP rules) flags irregularities, showing the rule, the timestamps and the calculation.
-3. **Trace impact** — a dependency graph (`Search → Phone → Messages → Wiretap`) shows the "blast radius" of a flawed act. Edges are typed *explicit / produced / derived / possible*; only *possible* edges come from LLM inference.
-4. **Find independent sources** — the LLM searches for evidence that independently supports a downstream act, breaking the *support nécessaire* chain. This tells the lawyer which arguments actually hold.
-5. **Build argument** — a source-backed draft: facts, pages, rule, affected acts, counter-evidence, editable outline. Case law is cited only from a curated set.
+1. **Extract** — dated events from contracts, invoices, emails and letters. Each is linked to its exact passage; anything we cannot anchor is flagged *Unverified*.
+2. **Qualify** — the AI proposes each event's legal effect: *starts / interrupts / suspends / no effect / bars action*. Ambiguous ones (e.g. *"we'll settle the balance next month"*) are labelled *AI-inferred* and require lawyer confirmation.
+3. **Compute** — a deterministic engine calculates the limitation date and the status (*alive, N days left* / *time-barred since…*), showing every step.
+4. **Stress-test** — sensitivity analysis shows what the conclusion hinges on: *"Without this email, the claim is time-barred."*
+5. **Check the defendant** — company registry/BODACC lookup for insolvency proceedings and the claim-declaration deadline.
+6. **Memo** — a source-cited pre-filing memo, editable.
+
+The same engine works for the defence: find the *fin de non-recevoir* in the opposing claim.
 
 ## Core principle
 
-**AI finds the facts. Rules test the procedure. Lawyers decide the law.**
+**AI finds and qualifies the facts. Rules compute the deadline. Lawyers decide.**
 
 ## Why Mistral (preferred, not required)
 
-Strong OCR on messy French scans, structured outputs, and open weights deployable on-premise to protect *secret professionnel*. The model layer is provider-agnostic, so other models can be swapped in.
+Strong French-language legal reasoning for qualifying ambiguous correspondence, OCR for scanned letters, structured outputs, and open weights deployable on-premise to protect *secret professionnel*. The model layer is provider-agnostic, so other models can be swapped in.
 
 ## 2-minute demo
 
-1. Upload a synthetic 30-page dossier.
-2. The timeline appears; one act is flagged: *search started 09:45, written consent signed 10:00.*
-3. Click the alert → source passages, rule (art. 76 CPP), calculation.
-4. **Analyze Impact** → the downstream chain lights up.
-5. ProcGuard finds an independent witness statement → one branch survives.
-6. **Build Argument** → draft ready.
+1. Load a sample unpaid-invoice file. The *mise en demeure* is flagged **"Does not interrupt"**; the mediation shows as a pause. Status: **TIME-BARRED**.
+2. ClaimClock flags a 2022 email as a possible acknowledgment of debt → **Confirm** → the deadline slides to 2027. Status: **ALIVE**. *This claim lives or dies on one email.*
+3. Twist: the defendant is in *redressement judiciaire* → **Don't sue — declare the claim within 37 days.**
+4. Generate the pre-filing memo.
 
 ## One-day scope
 
-Web app (no desktop shell), one synthetic dossier, 3–4 hard-coded rules, 5–8 graph nodes, source highlighting via page + quote matching.
+Web app; one synthetic client file (8 documents); 5 deterministic rules; live recomputation; mocked registry lookup if needed.
 
 See [PRD.md](PRD.md) for the full product requirements.
