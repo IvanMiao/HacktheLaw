@@ -83,32 +83,6 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--muted); border: 1p
 .col.center { padding: 20px 24px 40px; }
 .viewer-tab { position: fixed; right: 0; top: 50%; writing-mode: vertical-rl; background: var(--card); border: 1px solid var(--line); border-right: 0; border-radius: 6px 0 0 6px; padding: 12px 6px; font-size: 12px; font-weight: 600; }
 
-/* Command desk — additive, uses the teammate's paper/ink design tokens */
-.voice-panel { background: var(--paper); border-bottom: 1px solid var(--line-2); padding: 10px 20px; display: grid; gap: 7px; }
-.voice-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; }
-.voice-provider { margin-left: 8px; color: var(--muted); font-weight: 400; font-size: 10px; }
-.voice-status { margin-left: auto; color: var(--muted); }
-.voice-status.is-recording { color: var(--red); }
-.voice-status.is-recording::before { content: ''; display: inline-block; width: 7px; height: 7px; background: var(--red); border-radius: 50%; margin-right: 6px; }
-.voice-input { display: flex; gap: 8px; align-items: center; }
-.voice-input textarea { flex: 1; min-width: 100px; resize: vertical; max-height: 80px; font: inherit; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--card); color: var(--ink); }
-.voice-panel textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.voice-panel button:disabled { opacity: .5; cursor: not-allowed; }
-.voice-help { font-size: 11px; color: var(--muted); }
-.voice-help summary { cursor: pointer; width: fit-content; }
-.voice-help p { margin-top: 5px; max-width: 1100px; }
-.voice-examples { display: flex; gap: 5px; flex-wrap: wrap; padding: 7px 0 2px; }
-.voice-result { max-height: 100px; overflow: auto; border-left: 2px solid var(--amber); padding: 6px 10px; background: var(--card); font-size: 12px; }
-.voice-result p { white-space: pre-line; }
-.voice-result .chips { margin-top: 6px; }
-.voice-error { font-size: 12px; color: var(--red); }
-.voice-live { display: grid; gap: 3px; border-left: 2px solid var(--line-2); padding: 5px 10px; font-size: 12px; }
-.voice-live strong { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.voice-live [data-testid="voice-activity"] { color: var(--muted); font-size: 11px; }
-.voice-panel [role="switch"] { min-width: 190px; }
-.voice-disabled { min-height: 30px; display: flex; align-items: center; color: var(--muted); font-size: 12px; }
-@media (max-width: 800px) { .voice-input { flex-wrap: wrap; } .voice-input textarea { flex-basis: 60%; } .voice-panel { padding: 10px 12px; } .voice-status { margin-left: 0; } }
-
 /* Facts list */
 .col-head { padding: 14px 16px 8px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; position: sticky; top: 0; background: var(--card); }
 .col-head .muted { font-weight: 400; font-size: 12px; }
