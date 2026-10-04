@@ -6,7 +6,7 @@ import { validateCaseContext } from '../voice/contract';
 import { translator } from '../i18n/translate';
 import { adoptInterpretation, analyse, counterfactuals, initialState, value } from './chains';
 import { buildMemo, toMd } from './memo';
-import { restoreReviews, reviewStorageKey, serializeReviews } from './reviewStorage';
+import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './reviewStorage';
 
 const review = { note: 'Read with the complete email thread.', nextStep: 'Obtain the payment records.' };
 
@@ -77,6 +77,35 @@ describe('case-scoped review storage', () => {
     expect(restored.whatIf).toEqual({});
     expect(restored.art642).toBe(true);
     expect(analyse(SAMPLE, restored).limitation?.expiry).toBe('2027-06-02');
+  });
+
+  it('resets lawyer reviews while preserving the scenario and art642 setting', () => {
+    const adopted = adoptInterpretation(SAMPLE, initialState(SAMPLE), 'q-email', true, review);
+    const pendingId = SAMPLE.qualifications.find(({ id }) => id !== 'q-email')!.id;
+    const withScenario = {
+      ...adopted,
+      decisions: { ...adopted.decisions, [pendingId]: 'pending' as const },
+      whatIf: { 'q-concil': false },
+      art642: false,
+    };
+    const reset = resetReviews(SAMPLE, withScenario);
+    expect(Object.values(reset.decisions).every((decision) => decision === 'proposed')).toBe(true);
+    expect(reset.interpretations).toEqual({});
+    expect(reset.reviews).toEqual({});
+    expect(reset.whatIf).toEqual({ 'q-concil': false });
+    expect(reset.art642).toBe(false);
+    expect(analyse(SAMPLE, { ...reset, whatIf: {} })).toEqual(analyse(SAMPLE, { ...initialState(SAMPLE), art642: false }));
+  });
+
+  it('detects saved reviews and restores an empty reset state', () => {
+    const adopted = adoptInterpretation(SAMPLE, initialState(SAMPLE), 'q-email', true, review);
+    expect(hasReviews(initialState(SAMPLE))).toBe(false);
+    expect(hasReviews(adopted)).toBe(true);
+    expect(hasReviews({
+      ...initialState(SAMPLE),
+      reviews: { 'q-email': { note: 'Note only', nextStep: '' } },
+    })).toBe(true);
+    expect(restoreReviews(SAMPLE, serializeReviews(SAMPLE, resetReviews(SAMPLE, adopted)))).toEqual({ ...initialState(SAMPLE) });
   });
 
   it('does not carry reviews to another case or a regenerated qualification', () => {

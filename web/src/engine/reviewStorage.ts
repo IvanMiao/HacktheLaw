@@ -4,6 +4,12 @@ import { initialState, type AnalysisState, type Decision } from './chains';
 export const reviewStorageKey = (bundle: CaseBundle) => `domino:case-review:v1:${encodeURIComponent(bundle.id)}`;
 const revision = (bundle: CaseBundle) => JSON.stringify([bundle.id, bundle.generatedAt, bundle.profile, bundle.facts, bundle.qualifications]);
 
+export function resetReviews(bundle: CaseBundle, state: AnalysisState): AnalysisState {
+  return { ...initialState(bundle), whatIf: state.whatIf, art642: state.art642 };
+}
+
+export const hasReviews = (state: AnalysisState) => Object.values(state.decisions).some((d) => d !== 'proposed') || Object.keys(state.interpretations).length > 0 || Object.keys(state.reviews).length > 0;
+
 /** Reviews belong to this version of this case; scenarios and date flags are not saved. */
 export function serializeReviews(bundle: CaseBundle, state: AnalysisState): string {
   return JSON.stringify({ version: 1, revision: revision(bundle), decisions: state.decisions, interpretations: state.interpretations, reviews: state.reviews });

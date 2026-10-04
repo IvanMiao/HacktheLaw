@@ -3,6 +3,8 @@ export const french: Record<string, string> = {
   'Use this interpretation': 'Retenir cette interprétation',
   'Adopted ✓': 'Retenue ✓',
   'Modify interpretation': 'Modifier l’interprétation',
+  'Reset reviews': 'Réinitialiser les revues',
+  'Reset all lawyer reviews for this case?': 'Réinitialiser toutes les revues de l’avocat pour ce dossier ?',
   'To verify': 'À vérifier',
   'To verify: {question}': 'À vérifier : {question}',
   'Grounds awaiting verification': 'Moyens en attente de vérification',
