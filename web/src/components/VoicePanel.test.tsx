@@ -11,21 +11,23 @@ it('renders compact, accessible voice controls, editable fallback and explicit p
  const sample = getCase('c1-c2');
  const html = renderToStaticMarkup(<VoicePanel context={buildContext(initialState(sample), sample)} onIntent={()=>'result'} />);
  expect(html).toContain('aria-label="Voice command"');
- expect(html).toContain('<textarea');
+ expect(html).toContain('<input aria-label="Voice command"');
+ expect(html).toContain('class="voice-orb"');
+ expect(html).toContain('class="voice-field"');
  expect(html).toContain('role="switch"');
  expect(html).toContain('aria-checked="false"');
  expect(html).toContain('Continuous listening');
- expect(html).toContain('Partial transcript');
+ expect(html).toContain('Say or type a command');
  expect(html).toContain('data-testid="voice-diagnostics"');
  expect(html).toContain('Pipeline diagnostics');
  expect(html).toContain('automatically');
  expect(html).not.toContain('Start recording');
  expect(html).not.toContain('Stop recording');
  expect(html).not.toContain('Apply command');
- expect(html).toContain('Cancel');
+ expect(html).toContain('Restore scenario');
  expect(html).toContain('Mistral');
  expect(html).toContain('hypothetical');
- expect(html).toContain('中文');
+ expect(html).toContain('Change command panel language');
  expect(html).not.toContain('SpeechRecognition');
 });
 it('removes the typed submit UI entirely while listening is ON; fallback returns when OFF',()=>{
