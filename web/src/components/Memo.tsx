@@ -34,7 +34,6 @@ export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state:
         })}
         <h2>5. Sources</h2>
         {cited.map((d) => <p key={d} className="li">{t(docOf(d).title)}{docOf(d).provenance === 'mock' && docOf(d).group !== 'case' ? t(' — mock, to replace') : ''}</p>)}
-        <p className="muted small">{t('{count} documents in the file.', { count: bundle.docs.length })}</p>
       </article>
     </div>
   );

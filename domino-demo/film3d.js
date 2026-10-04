@@ -112,6 +112,7 @@ window.film3D=function(canvas,hooks){
     wv+=(wave-wv)*Math.min(1,dt*3.2);pull+=(pullTo-pull)*Math.min(1,dt*.9);
     const [p,l]=shot(wv,pull*pull*(3-2*pull));cpos.lerp(p,Math.min(1,dt*2.6));clook.lerp(l,Math.min(1,dt*3.2));
     cam.position.copy(cpos);cam.lookAt(clook);
+    
   }
   function resize(){R.setSize(W(),H(),false);cam.aspect=W()/H();cam.updateProjectionMatrix();}
   addEventListener('resize',resize);
