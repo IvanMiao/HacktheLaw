@@ -1,3 +1,4 @@
+import { useLocale } from '../i18n/useLocale';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { Anchor } from '../data/case';
 import { DOCS, docById, type DocGroup } from '../data/documents';
@@ -9,6 +10,7 @@ const GROUPS: [DocGroup, string][] = [['case', 'Case file'], ['caselaw', 'Case l
 type Props = { docId: string; onDoc: (id: string) => void; active: Anchor | null; quotesByDoc: Record<string, string[]>; onCollapse: () => void };
 
 export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: Props) {
+  const { t } = useLocale();
   const doc = docById(docId);
   const activeRef = useRef<HTMLElement | null>(null);
   const activeQuote = active && active.doc === docId ? active.quote : null;
@@ -22,24 +24,24 @@ export function SourceViewer({ docId, onDoc, active, quotesByDoc, onCollapse }: 
   return (
     <div className="viewer">
       <div className="viewer-bar">
-        <select value={docId} onChange={(e) => onDoc(e.target.value)} aria-label="Document">
+        <select value={docId} onChange={(e) => onDoc(e.target.value)} aria-label={t('Document')}>
           {GROUPS.map(([g, label]) => (
-            <optgroup key={g} label={label}>
+            <optgroup key={g} label={t(label)}>
               {DOCS.filter((d) => d.group === g).map((d) => (
-                <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}{d.provenance === 'mock' ? ' (mock)' : ''}</option>
+                <option key={d.id} value={d.id}>{d.date ? `${fr(d.date)} · ` : ''}{d.title}{d.provenance === 'mock' ? t(' (mock)') : ''}</option>
               ))}
             </optgroup>
           ))}
         </select>
-        <button className="icon-btn" onClick={onCollapse} title="Collapse source viewer" aria-label="Collapse source viewer">⟩</button>
+        <button className="icon-btn" onClick={onCollapse} title={t('Collapse source viewer')} aria-label={t('Collapse source viewer')}>⟩</button>
       </div>
       <div className="viewer-meta">
-        <span className={`prov prov-${doc.provenance}`}>{doc.provenance === 'real' ? 'Source · Judilibre' : 'Mock'}</span>
-        {doc.note && <span className="muted">{doc.note}</span>}
-        {doc.pdf && <a href={doc.pdf} target="_blank" rel="noreferrer">Open PDF ↗</a>}
+        <span className={`prov prov-${doc.provenance}`}>{doc.provenance === 'real' ? 'Source · Judilibre' : t('Mock')}</span>
+        {doc.note && <span className="muted">{t(doc.note)}</span>}
+        {doc.pdf && <a href={doc.pdf} target="_blank" rel="noreferrer">{t('Open PDF ↗')}</a>}
       </div>
-      {missing && <div className="callout amber">Quote not found in this document — marked Unverified.</div>}
-      <article className={`page ${doc.format}`}>
+      {missing && <div className="callout amber">{t('Quote not found in this document — marked Unverified.')}</div>}
+      <article lang="fr" className={`page ${doc.format}`}>
         {doc.format === 'markdown'
           ? <Markdown text={doc.text} quotes={quotes} active={activeQuote} activeRef={activeRef} />
           : doc.text.split('\n').map((line, i) => <p key={i} className={line.trim() ? '' : 'gap'}>{highlight(line, quotes, activeQuote, activeRef)}</p>)}
@@ -59,6 +61,7 @@ function inline(text: string, quotes: string[], active: string | null, ref: RefO
 }
 
 function Markdown({ text, quotes, active, activeRef }: { text: string; quotes: string[]; active: string | null; activeRef: RefObject<HTMLElement | null> }) {
+  const { t } = useLocale();
   const lines = text.split('\n').map((raw) => raw.trimEnd());
   const inCommentary = lines.reduce<boolean[]>((acc, line, i) => {
     acc.push(line.startsWith('## ') ? /^## (Portée|Référence)/.test(line) : i > 0 && acc[i - 1]);
@@ -73,7 +76,7 @@ function Markdown({ text, quotes, active, activeRef }: { text: string; quotes: s
           return (
             <h4 key={i} className={commentary ? 'commentary-h' : ''}>
               {line.slice(3)}
-              {commentary && <span className="tag-commentary">Commentary — not citable</span>}
+              {commentary && <span className="tag-commentary">{t('Commentary — not citable')}</span>}
             </h4>
           );
         }

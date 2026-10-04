@@ -70,3 +70,5 @@ Shortcuts: `1`/`2`/`3` modes · `J`/`K` facts · `C`/`R` confirm/reject · `P` p
 Screenshot URLs: `?mode=chains&link=c1-cons`, `?mode=chains&confirmed&whatif=q-email`.
 
 Implementation outline, dependency/parallelism map and acceptance checklist: [VOICE_DEVELOPMENT_PLAN.md](../docs/VOICE_DEVELOPMENT_PLAN.md).
+
+Language: use the EN / FR switch on the welcome screen or in the top bar. The choice is remembered in this browser. Share `?lang=fr` or `?lang=en` links (combinable with the screenshot parameters). Switching keeps the current review decisions and what-if scenario. The interface, analysis and copied Markdown memo are translated; source documents, citation quotes and PDFs retain their original French text.
