@@ -97,7 +97,7 @@ function checksFor(bundle: CaseBundle, libraryIds: Set<string>): Check[] {
   return [
     { name: 'Anchoring', pass: verifiedPercent >= 0.9 && missingIds.size === 0, detail: `${verified}/${facts.length} verified (${(verifiedPercent * 100).toFixed(1)}%); ${missingIds.size} hallucinated doc ids${missingIds.size ? `: ${[...missingIds].join(', ')}` : ''}` },
     { name: 'Profile', pass: bundle.profile.relationship === 'commercial' && bundle.profile.courtType === 'tribunal_commerce'
-      && bundle.profile.claimant.includes('Atelier Lumière') && bundle.profile.defendant.includes('Bâtiself')
+      && bundle.profile.claimant.toLowerCase().includes('atelier lumière') && bundle.profile.defendant.toLowerCase().includes('bâtiself')
       && String(bundle.profile.side).startsWith('Defendant'), detail: `${bundle.profile.relationship}; ${bundle.profile.courtType}; ${bundle.profile.claimant}; ${bundle.profile.defendant}; ${String(bundle.profile.side)}` },
     { name: 'Limitation start', pass: limitation, detail: role('limitation_start').map((fact) => fact.date).join(', ') || 'not found' },
     { name: 'Communication and notice dates', pass: communication && notice, detail: `communication: ${role('debtor_communication').map((fact) => fact.date).join(', ') || 'not found'}; notice: ${role('formal_notice').map((fact) => fact.date).join(', ') || 'not found'}` },
