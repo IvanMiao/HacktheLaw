@@ -188,11 +188,15 @@ export function createLlmClient(provider: 'openai' | 'mistral', options: Provide
       if (limit) await takeMistralToken(signal);
       const response = await fetcher(url, {
         method: 'POST',
-        redirect: 'error',
+        // Workers support manual redirects; reject them without forwarding credentials.
+        redirect: 'manual',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         ...(signal ? { signal } : {}),
       });
+      if (response.status >= 300 && response.status < 400) {
+        throw new Error(`AI provider redirect rejected (${response.status})`);
+      }
       if (response.ok) return response.json() as Promise<ProviderResponse>;
       const detail = await response.text();
       const retryable = response.status === 429 || response.status >= 500;

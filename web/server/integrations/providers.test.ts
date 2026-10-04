@@ -8,7 +8,7 @@ describe('firm provider selection (fake transport contract)',()=>{
   const profiles=readProfiles(env);const fetcher=vi.fn(async(_url:RequestInfo|URL,_options?:RequestInit)=>Response.json({choices:[{message:{content:'{"ok":true}'}}]}));
   const client=profileClient(profiles[0],env,fetcher);await client.json({model:profiles[0].model,system:'test',messages:[],name:'probe',schema:{type:'object'}});
   expect(fetcher.mock.calls[0][0]).toBe('http://127.0.0.1:9911/v1/chat/completions');
-  const opts=fetcher.mock.calls[0][1]!;expect(JSON.parse(String(opts.body)).model).toBe('firm-model');expect(opts.redirect).toBe('error');expect(opts.headers).toMatchObject({Authorization:'Bearer key1'});
+  const opts=fetcher.mock.calls[0][1]!;expect(JSON.parse(String(opts.body)).model).toBe('firm-model');expect(opts.redirect).toBe('manual');expect(opts.headers).toMatchObject({Authorization:'Bearer key1'});
   expect(JSON.stringify(publicProfiles(profiles,env))).not.toContain('key1');expect(JSON.stringify(publicProfiles(profiles,env))).not.toContain('FIRM_KEY');
  });
  it('rejects untrusted origins, credentials in URL and unsupported profiles',()=>{

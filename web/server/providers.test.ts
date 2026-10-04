@@ -11,6 +11,32 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+describe('Worker-compatible provider requests', () => {
+  it.each(['openai', 'mistral'] as const)('calls %s with a redirect mode supported by Workers', async (provider) => {
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, options?: RequestInit) => {
+      if (options?.redirect !== 'manual' && options?.redirect !== 'follow') {
+        throw new TypeError('Invalid redirect value');
+      }
+      return response(provider === 'openai'
+        ? { output_text: '{"ok":true}' }
+        : { choices: [{ message: { content: '{"ok":true}' } }] });
+    });
+    const client = createLlmClient(provider, { apiKey: 'test-only', fetcher });
+    await expect(client.json({ model: 'test', system: 'test', messages: [], schema: {}, name: 'test' }))
+      .resolves.toMatchObject({ value: { ok: true } });
+  });
+
+  it.each([301, 302, 303, 307, 308])('rejects HTTP %i without following or retrying the redirect', async (status) => {
+    const fetcher = vi.fn(async () => response({ private: 'provider details' }, status, {
+      location: 'https://untrusted.example/collect',
+    }));
+    const client = createLlmClient('openai', { apiKey: 'test-only', fetcher });
+    await expect(client.json({ model: 'test', system: 'test', messages: [], schema: {}, name: 'test' }))
+      .rejects.toThrow(`AI provider redirect rejected (${status})`);
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith('https://api.openai.com/v1/responses', expect.objectContaining({ redirect: 'manual' }));
+  });
+});
+
 describe('OpenAI Responses tool loop', () => {
   it('round-trips function calls and stops when the done handler returns true', async () => {
     vi.stubEnv('OPENAI_API_KEY', 'test-openai');
