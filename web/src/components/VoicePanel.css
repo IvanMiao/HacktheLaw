@@ -27,9 +27,8 @@
 .voice-transcript i { display: inline-block; width: 2px; height: 1.1em; margin-left: 3px; vertical-align: -3px; background: var(--violet); animation: voice-blink 1s steps(1) infinite; }
 .voice-cancel { flex: none; padding: 4px 8px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--card); font-size: 13px; }
 .voice-side { display: flex; align-items: center; gap: 10px; flex: none; }
-.voice-language { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink-2); font: 500 12.5px var(--mono); }
+.voice-language { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink-2); font: 500 12.5px var(--mono); cursor: pointer; }
 .voice-language:hover { border-color: var(--line-2); }
-.voice-language span { color: var(--muted); }
 .voice-connection { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
 .voice-connection i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px #1f7a452b; }
 .voice-panel[data-state='offline'] .voice-connection i { background: var(--amber); box-shadow: 0 0 0 3px #9a5b0b2b; }
@@ -73,5 +72,5 @@
 @keyframes voice-blink { 50% { opacity: 0; } }
 @keyframes voice-receipt-in { from { opacity: 0; transform: translateY(-8px); } }
 @media (max-width: 800px) { .voice-panel { padding: 10px 12px; } .voice-connection { display: none; } .voice-hint { padding-left: 0; } }
-@media (max-width: 560px) { .voice-bar { gap: 8px; padding: 8px; } .voice-orb { width: 42px; height: 42px; } .voice-field { height: 42px; } .voice-language { display: none; } .voice-wave i:nth-child(n+13) { display: none; } }
+@media (max-width: 560px) { .voice-bar { gap: 8px; padding: 8px; } .voice-orb { width: 42px; height: 42px; } .voice-field { height: 42px; } .voice-language { padding: 6px 4px; } .voice-wave i:nth-child(n+13) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .voice-panel *, .voice-panel *::before, .voice-panel *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
