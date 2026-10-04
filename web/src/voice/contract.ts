@@ -28,7 +28,7 @@ export function validateCaseContext(raw: unknown): VoiceContext {
       || !Array.isArray(context.qualifications) || !Array.isArray(context.chains) || !Array.isArray(context.sources)) return invalid();
     const ids = bundle.qualifications.map((qualification) => qualification.id);
     if (Object.keys(context.decisions).length !== ids.length
-      || !ids.every((id) => ['proposed', 'confirmed', 'rejected', 'pending'].includes(context.decisions[id]))) return invalid();
+      || !ids.every((id) => ['proposed', 'confirmed', 'rejected', 'pending', 'disagreed'].includes(context.decisions[id]))) return invalid();
     if (!Object.entries(context.whatIf).every(([id, value]) => ids.includes(id) && typeof value === 'boolean')
       || context.hypothetical !== Boolean(Object.keys(context.whatIf).length)) return invalid();
     if (JSON.stringify(context.qualifications) !== JSON.stringify(bundle.qualifications)) return invalid();

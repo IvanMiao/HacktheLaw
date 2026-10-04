@@ -85,7 +85,7 @@ Plans: `docs/VOICE_DEVELOPMENT_PLAN.md`, `docs/CASE_INTEGRATION_PLAN.md`; case v
 Original shortcuts:1/2/3 modes, J/K facts, C use / R edit interpretation, P presenter, Esc drawer. Inputs do not trigger legal-review shortcuts. Real Cassation PDFs remain labeled real; synthetic case/statutory/C1 authority excerpts remain mocks requiring review.
 
 
-Qualification controls offer **Use this interpretation**, **Modify interpretation**, and **To verify**. Modifications explicitly select an answer and record a reason before recalculation. Pending reviews retain the candidate interpretation without treating it as established. Notes and evidence-request drafts appear in the memo; requests are not sent. Reviews are stored for the current version of a CaseBundle, while what-if scenarios remain temporary. The “Reset reviews” control in the banner clears saved reviews for the current case.
+Qualification controls offer **Adopt**, **Edit & adopt**, and **Disagree**. Edited adoption selects an answer; its note is optional. Adoption requires no input. Disagreement requires a reason and marks dependent conclusions for reassessment without adopting the opposite reading. Opening or cancelling either editor leaves the saved analysis unchanged. Saved notes appear in the memo. Previously saved next actions remain in the review record and memo; the review forms no longer ask for a next action or evidence request. Reviews are stored for the current version of a CaseBundle, while what-if scenarios remain temporary. The “Reset reviews” control in the banner clears saved reviews for the current case.
 
 ## Cloudflare production
 

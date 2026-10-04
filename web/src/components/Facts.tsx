@@ -1,7 +1,7 @@
 import { useLocale } from '../i18n/useLocale';
 import { useBundle } from '../data/useBundle';
 import type { Anchor, Fact } from '../data/bundle';
-import { value, type Analysis, type AnalysisState, type ReviewEntry, type Decision } from '../engine/chains';
+import { value, type Analysis, type AnalysisState, type ReviewEntry } from '../engine/chains';
 import { fr } from '../engine/dates';
 import { SourceChip } from './SourceChip';
 import { isFirmImport } from '../integrations/provenance';
@@ -20,6 +20,7 @@ function QualBadge({ qid, state }: { qid: string; state: AnalysisState }) {
       {whatIf ? t('What-if: ') : ''}{t(v ? q.yes : q.no)}
       {d === 'confirmed' && !whatIf && <span className="tick" aria-label={t('confirmed')}> ✓</span>}
       {d === 'rejected' && !whatIf && <span className="cross" aria-label={t('rejected')}> ✕</span>}
+      {d === 'disagreed' && !whatIf && <span className="review-pending"> · {t('Not adopted')}</span>}
       {d === 'pending' && !whatIf && <span className="review-pending"> · {t('To verify')}</span>}
     </span>
   );
@@ -50,12 +51,12 @@ export function FactList({ state, selected, onSelect }: { state: AnalysisState; 
 
 type DetailProps = {
   fact: Fact; state: AnalysisState; analysis: Analysis;
-  onDecide: (qid: string, d: Decision) => void; onAnchor: (a: Anchor) => void; onOpenLink: (id: string) => void;
+  onAnchor: (a: Anchor) => void; onOpenLink: (id: string) => void;
   onAdopt: (qid: string, interpretation: boolean, review: ReviewEntry) => void;
-  onSaveReview: (qid: string, review: ReviewEntry) => void;
+  onDisagree: (qid: string, review: ReviewEntry) => void;
 };
 
-export function FactDetail({ fact, state, analysis, onDecide, onAnchor, onOpenLink, onAdopt, onSaveReview }: DetailProps) {
+export function FactDetail({ fact, state, analysis, onAnchor, onOpenLink, onAdopt, onDisagree }: DetailProps) {
   const { t, locale } = useLocale();
   const { bundle, qualOf } = useBundle();
   const q = fact.qualification ? qualOf(fact.qualification) : undefined;
@@ -87,13 +88,13 @@ export function FactDetail({ fact, state, analysis, onDecide, onAnchor, onOpenLi
           </div>
           <p className="question">{t(q.question)}</p>
           <p className="answer"><QualBadge qid={q.id} state={state} /></p>
-          <p className="reasoning">{q.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[q.id] !== undefined && state.reviews[q.id]?.note ? state.reviews[q.id].note : t(q.reasoning)}</p>
+          <p className="reasoning">{q.id in state.whatIf ? t('Scenario interpretation') : state.interpretations[q.id] !== undefined && state.reviews[q.id]?.note ? state.reviews[q.id].note : value(bundle, state, q.id) === q.proposed ? t(q.reasoning) : ''}</p>
           <p className="muted small">{t('Basis:')} {t(q.rule)}</p>
           {fact.role === 'formal_notice' && <div className="callout neutral"><strong>{t('Does not interrupt.')}</strong> {t('A common misconception: an ordinary mise en demeure leaves the limitation date unchanged.')}</div>}
           <ReviewControls key={q.id} qualification={q} decision={state.decisions[q.id]} interpretation={value(bundle, state, q.id)}
             review={state.reviews[q.id] ?? { note: '', nextStep: '' }} preview={preview}
-            onAdopt={(interpretation, review) => onAdopt(q.id, interpretation, review)} onPending={() => onDecide(q.id, 'pending')}
-            onSave={(review) => onSaveReview(q.id, review)} />
+            onAdopt={(interpretation, review) => onAdopt(q.id, interpretation, review)}
+            onDisagree={(review) => onDisagree(q.id, review)} />
         </section>
       )}
 

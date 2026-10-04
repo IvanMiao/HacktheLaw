@@ -4,7 +4,7 @@ import { getCase } from '../data/catalog';
 import { applyIntent, buildContext } from '../voice/commands';
 import { validateCaseContext } from '../voice/contract';
 import { translator } from '../i18n/translate';
-import { adoptInterpretation, analyse, counterfactuals, initialState, value } from './chains';
+import { adoptInterpretation, disagreeInterpretation, analyse, counterfactuals, initialState, value } from './chains';
 import { buildMemo, toMd } from './memo';
 import { hasReviews, resetReviews, restoreReviews, reviewStorageKey, serializeReviews } from './reviewStorage';
 
@@ -40,6 +40,23 @@ describe('explicit lawyer interpretations on CaseBundle', () => {
     expect(result.chains.map((chain) => chain.status)).toEqual(['pending', 'pending']);
     expect(result.chains[0].links.find((link) => link.id === 'c1-out')?.status).toBe('not_reached');
     expect(result.chains.map((chain) => chain.links.length)).toEqual([7, 6]);
+  });
+
+  it('requires a disagreement reason, does not invert the reading, and cannot save a preview', () => {
+    const state = initialState(SAMPLE);
+    expect(disagreeInterpretation(SAMPLE, state, 'q-email', { note: '  ', nextStep: '' })).toBe(state);
+    expect(disagreeInterpretation(SAMPLE, state, 'unknown', review)).toBe(state);
+    const next = disagreeInterpretation(SAMPLE, state, 'q-email', review);
+    expect(value(SAMPLE, next, 'q-email')).toBe(value(SAMPLE, state, 'q-email'));
+    expect(next.decisions['q-email']).toBe('disagreed');
+    expect(next.reviews['q-email']).toEqual(review);
+    expect(analyse(SAMPLE, next).chains.map(chain => chain.status)).toEqual(['pending', 'pending']);
+    const preview = { ...next, whatIf: { 'q-email': true } };
+    expect(disagreeInterpretation(SAMPLE, preview, 'q-email', review)).toBe(preview);
+    const readopted = adoptInterpretation(SAMPLE, next, 'q-email', false, { note: '', nextStep: review.nextStep });
+    expect(readopted.decisions['q-email']).toBe('confirmed');
+    expect(readopted.reviews['q-email'].note).toBe('');
+    expect(analyse(SAMPLE, readopted).chains.some(chain => chain.status === 'pending')).toBe(false);
   });
 
   it('keeps what-if scenarios separate and flips the currently adopted interpretation', () => {
@@ -145,7 +162,9 @@ describe('review compatibility with the additional cases and voice', () => {
     expect(result.chains.find(chain => chain.id === chainId)?.status).toBe('fails');
     expect(result.chains.map(chain => chain.links.length)).toEqual(analyse(bundle, initial).chains.map(chain => chain.links.length));
     expect(validateCaseContext(buildContext(adopted, bundle)).interpretations?.[qid]).toBe(!original);
-    const pending = { ...adopted, decisions: { ...adopted.decisions, [qid]: 'pending' as const } };
+    const pending = disagreeInterpretation(bundle, adopted, qid, review);
+    expect(pending.decisions[qid]).toBe('disagreed');
+    expect(restoreReviews(bundle, serializeReviews(bundle, pending))).toEqual(pending);
     expect(analyse(bundle, pending).chains.find(chain => chain.id === chainId)?.status).toBe('pending');
     expect(value(bundle, pending, qid)).toBe(!original);
     expect(() => validateCaseContext(buildContext(pending, bundle))).not.toThrow();
@@ -160,7 +179,7 @@ describe('review compatibility with the additional cases and voice', () => {
       const t = translator(locale);
       const markdown = toMd(bundle, buildMemo(bundle, analyse(bundle, preview, t), preview, t), t);
       const q = bundle.qualifications.find(q => q.id === qid)!;
-      expect(markdown).toContain(t('To verify — {question}: {answer}.', { question: t(q.question), answer: t(!original ? q.yes : q.no) }));
+      expect(markdown).toContain(t('Not adopted — {question}: {answer}.', { question: t(q.question), answer: t(!original ? q.yes : q.no) }));
       expect(markdown).toContain(review.note);
       expect(markdown).toContain(review.nextStep);
     }
