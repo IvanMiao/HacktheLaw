@@ -1,6 +1,8 @@
 // Additional-case translations extend, never replace, the teammate's original dictionary.
 export const casesFrench: Record<string,string> = {
   'Case':'Dossier',
+  'Voice commands':'Commandes vocales',
+  'Voice commands are available for the demo cases only.':'Les commandes vocales sont réservées aux dossiers de démonstration.',
   'Legal review':'Vérification juridique',
   'Procedural timeline':'Chronologie procédurale',
   '{count} active procedural consequences · {chains} enabled chains · legal review required':'Conséquences procédurales actives : {count} · chaînes activées : {chains} · vérification juridique requise',

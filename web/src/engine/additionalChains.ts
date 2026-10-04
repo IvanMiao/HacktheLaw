@@ -1,23 +1,22 @@
-import type { CaseDataset } from '../data/catalog.ts';
-import { value, isContested, type Analysis, type AnalysisState, type ChainResult, type Link, type NodeKind } from './chains.ts';
-import { computeLimitation } from './limitation.ts';
-import { daysBetween } from './dates.ts';
-import { proceduralDeadline } from './proceduralDates.ts';
-import type { Translator } from '../i18n/translate.ts';
-import type { RegimeKey } from './regimes.ts';
+import { factOf, type CaseBundle } from '../data/bundle.js';
+import { value, isContested, type Analysis, type AnalysisState, type ChainResult, type Link, type NodeKind } from './chains.js';
+import { daysBetween } from './dates.js';
+import { proceduralDeadline } from './proceduralDates.js';
+import type { Translator } from '../i18n/translate.js';
+import type { RegimeKey } from './regimes.js';
 
 type Definition = {id:string; kind:NodeKind; title:string; statement:string; fact?:string; rule?:string; deps?:string[]; holds?:boolean; brokenReason?:string; regime?:RegimeKey};
 
-export function analyseAdditional(state: AnalysisState, dataset: CaseDataset, t: Translator): Analysis {
-  const v = (id:string) => value(state, id, dataset);
-  const contested = (id:string) => isContested(state, id, dataset);
+export function analyseAdditional(bundle: CaseBundle, state: AnalysisState, t: Translator): Analysis {
+  const v = (id:string) => value(bundle, state, id);
+  const contested = (id:string) => isContested(bundle, state, id);
   const chain = (id:string, title:string, subtitle:string, outcome:string, definitions:Definition[]): ChainResult => {
     let broken = false;
     const links:Link[] = definitions.map(d => {
       const status = broken ? 'not_reached' : d.holds === false ? 'broken' : (d.deps ?? []).some(contested) ? 'contested' : 'established';
       if (status === 'broken') broken = true;
       return {id:d.id, kind:d.kind, title:t(d.title), statement:t(d.statement), rule:d.rule, regime:d.regime,
-        anchors:dataset.facts.find(f => f.id === d.fact)?.anchors ?? [], deps:d.deps ?? [], status,
+        anchors:d.fact ? factOf(bundle, d.fact).anchors : [], deps:d.deps ?? [], status,
         brokenReason:d.brokenReason ? t(d.brokenReason) : undefined};
     });
     return {id, title:t(title), subtitle:t(subtitle), outcome:t(outcome), links,
@@ -25,16 +24,16 @@ export function analyseAdditional(state: AnalysisState, dataset: CaseDataset, t:
       hingesOn:[...new Set(links.filter(l => l.status === 'contested').flatMap(l => l.deps))]};
   };
   let chains:ChainResult[] = []; let notices:string[] = []; let timeline:{label:string;date:string}[] = [];
-  if (dataset.id === 'c3') {
+  if (bundle.preset === 'c3') {
     const declaration = proceduralDeadline('2025-11-20',2), relief = proceduralDeadline('2025-11-20',6);
     notices = [
       t('SYNTHETIC — legal review required. Declaration does not lift the independent payment-action stay.'),
-      t('Ordinary relief deadline {date} expired {days} days before the as-of date.',{date:relief.adjusted,days:daysBetween(relief.adjusted,dataset.meta.asOf)}),
+      t('Ordinary relief deadline {date} expired {days} days before the as-of date.',{date:relief.adjusted,days:daysBetween(relief.adjusted,bundle.profile.asOf)}),
       t('Exceptional timing concerns inability to know the existence of the debt, not merely ignorance of proceedings. Relief requires an application and a court order; no relief is adjudicated here.'),
       t('Inopposability is subject to statutory plan conditions, not extinction. Review deemed declaration by the debtor under L622-24, creditor domicile and published security exceptions.'),
     ];
     if (v('q-listed') || v('q-knowledge')) notices.push(t('Hypothetical omission or debt-knowledge evidence may support review of relief, but does not itself remove forclusion or the payment stay.'));
-    timeline = [{label:'Opening judgment',date:'2025-11-10'},{label:'BODACC publication',date:'2025-11-20'},{label:'Declaration deadline',date:declaration.adjusted},{label:'Ordinary relief deadline',date:relief.adjusted},{label:'As of',date:dataset.meta.asOf}];
+    timeline = [{label:'Opening judgment',date:'2025-11-10'},{label:'BODACC publication',date:'2025-11-20'},{label:'Declaration deadline',date:declaration.adjusted},{label:'Ordinary relief deadline',date:relief.adjusted},{label:'As of',date:bundle.profile.asOf}];
     chains = [
       chain('C3-stay','Stay on individual payment actions','Independent from declaration and relief','Payment-action stay — collective route required',[
         {id:'c3-stay-fact',kind:'fact',title:'Pre-existing debt',statement:'Invoice predates the opening judgment.',fact:'g1'},
@@ -51,7 +50,7 @@ export function analyseAdditional(state: AnalysisState, dataset: CaseDataset, t:
         {id:'c3-out',kind:'outcome',title:'Conditional inopposability',statement:'Claim is not extinguished. Statutory plan conditions and relief application must be reviewed.',fact:'g8',rule:'L622-26 C. com.'},
       ]),
     ];
-  } else if (dataset.id === 'c4') {
+  } else if (bundle.preset === 'c4') {
     notices = [t('SYNTHETIC — legal review required. Losing the late objection does not validate the consumer jurisdiction clause.'),
       t('A timely reasoned objection naming the requested court removes the timing bar only; it does not guarantee transfer to Nantes.'),
       t('Residual own-motion consumer-clause review is distinct from territorial transfer and requires hearing the parties. CPC 77 powers are limited; R631-3 does not automatically transfer this defendant case.')];
@@ -80,7 +79,5 @@ export function analyseAdditional(state: AnalysisState, dataset: CaseDataset, t:
       {id:'c5-out',kind:'outcome',title:'Potential finality',statement:'First-instance judgment potentially final only if no valid appeal or remaining remedy survives.',fact:'k1'},
     ])];
   }
-  // Kept for backward-compatible Analysis consumers; only original C1/C2 renders limitation.
-  const limitation = computeLimitation({start:dataset.facts[0].date,years:5,regimeRule:'Not used for these procedural chains',art642:false,events:[]},t);
-  return {chains,limitation,contestedQuals:[...new Set(chains.flatMap(c => c.hingesOn))].filter(contested),notices,timeline:timeline.sort((a,b) => a.date.localeCompare(b.date))};
+  return {chains, limitation:null, contestedQuals:[...new Set(chains.flatMap(c => c.hingesOn))].filter(contested),notices,timeline:timeline.sort((a,b) => a.date.localeCompare(b.date))};
 }

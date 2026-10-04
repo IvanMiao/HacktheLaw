@@ -1,6 +1,12 @@
 # Domino — integrated local demo
 
-The demo combines the original C1/C2 case, selectable C3/C4/C5 synthetic cases, the main branch's English/French interface, and continuous realtime Mistral voice commands. Facts, Chains, Memo, source highlighting and manual lawyer review are preserved. Legal rules and synthetic scenarios require lawyer review.
+The demo combines the original C1/C2 case, selectable C3/C4/C5 synthetic cases, AI analysis of uploaded documents, the English/French interface, intro film and continuous realtime Mistral voice commands. Facts, Chains, Memo, source highlighting, sample/upload flow and manual lawyer review are preserved. Legal rules and synthetic scenarios require lawyer review.
+
+The default welcome screen retains the intro film, cached sample and document-upload flow. The case bundle carries analysis through the browser engine; uploaded documents are analyzed through Domino's local API. Source documents stay in their original French, while the interface, analysis and copied memo support English and French. Language changes preserve review state; changing cases clears it.
+
+Original shortcuts: `1`/`2`/`3` modes, `J`/`K` facts, `C`/`R` manual confirm/reject, `P` presenter mode, and `Esc` to close the drawer. Example URLs: `?mode=chains&link=c1-cons`, `?mode=chains&confirmed&whatif=q-email`, and `?lang=fr` or `?lang=en`.
+
+The two Cour de cassation decisions in `../data/caselaw/` are real. Case files, statutory excerpts and the Cass. 2e civ. authority for chain C1 are mock sources labelled as such in the UI.
 
 ## Local startup
 
@@ -9,11 +15,11 @@ Requirements: Node/npm for Vite/Vitest and **Bun** for the authenticated native 
 From `web/`:
 1. Run `npm ci` for a fresh checkout.
 2. Store `MISTRAL_API_KEY` in ignored `.env.local` using `.env.example`. Never put a secret in `VITE_*` variables. Existing local credentials are already configured. Bun loads `.env` and `.env.local`; exported values take precedence.
-3. Terminal A: `npm run voice:server` starts REST on http://127.0.0.1:8787 and native WS bridge on loopback8788.
-4. Terminal B: `npm run dev` starts http://localhost:5173. Vite proxies `/api/realtime` as WebSocket and other `/api` calls as HTTP.
+3. Terminal A: `npm run voice:server` starts REST on http://127.0.0.1:8787 and native WS bridge on loopback:8788.
+4. Terminal B: `npm run dev` starts http://localhost:5173. Vite proxies only voice routes: `/api/realtime` as WebSocket and `/api/intent`, `/api/transcribe`, `/api/status` as HTTP. Main `/api/health` and `/api/cases` stay on Domino's Vite middleware.
 5. Open http://localhost:5173/?mode=chains. If services were handed over running, do not start duplicate listeners.
 
-Status: http://127.0.0.1:8787/api/status. `/api/health` is not defined. Keep ports5173/8787/8788 free. Allowed browser origins are localhost:5173 and127.0.0.1:5173. Static Vite preview does not provide backend proxies. These endpoints are local-development only; public exposure needs separate authentication/security review.
+Status: http://127.0.0.1:8787/api/status; Domino provider health is http://localhost:5173/api/health. Keep ports 5173/8787/8788 free. Allowed browser origins default to `http://localhost:5173` and `http://127.0.0.1:5173`; add comma-separated origins with server-only `VOICE_ALLOWED_ORIGINS`. Static Vite preview does not provide backend proxies. These endpoints are local-development only; public exposure needs separate authentication/security review.
 
 ## Continuous voice interaction
 
@@ -27,6 +33,7 @@ Status: http://127.0.0.1:8787/api/status. `/api/health` is not defined. Keep por
 - OFF/cancel/unmount stops tracks and AudioContext, closes WS, cancels requests/queued commands/reconnect timers and rejects late results. Changing cases unmounts the old session, turns listening off and resets case state; enable voice again for the new case.
 - Transient connection loss discards incomplete speech and allows at most two reconnects600/1200ms. Audio during reconnect is not sent. Auth/policy/invalid-audio errors do not retry.
 - Navigation, grounded explanation, challenge summaries, hypothetical previews and reset are allowlisted. Voice cannot confirm/reject legal facts. Unknown or foreign-case IDs are rejected. Repeating a preview is idempotent.
+- Voice commands are enabled only for the C1/C2 and C3/C4/C5 demo bundles; AI/uploaded cases show a demo-only note and are never checked against the fixture catalog.
 - Audio, transcript and demo context are sent to Mistral. Do not use confidential client data. Key remains server-side. No fake/cached provider fallback is silently substituted on error.
 
 ## Cases

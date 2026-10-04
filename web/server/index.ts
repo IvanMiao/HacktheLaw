@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { createHandler } from './api.ts';
+import { createHandler } from './voice-api.ts';
 import { startRealtimeServer, type RealtimeRuntime } from './realtime-server.ts';
 const runtime=(globalThis as unknown as {Bun?:RealtimeRuntime}).Bun;
 if(!runtime)throw Error('Realtime voice server requires Bun (native WebSocket support). Run npm run voice:server.');

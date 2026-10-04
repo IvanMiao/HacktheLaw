@@ -1,7 +1,10 @@
 // Protocol follows official mistralai/client-python extra/realtime/{connection,transcription}.py.
 // Long-lived credentials and raw provider errors never cross the browser boundary.
 export const REALTIME_MODEL='voxtral-mini-transcribe-realtime-2602';
-export function allowedRealtimeOrigin(origin:string|undefined){return origin==='http://localhost:5173'||origin==='http://127.0.0.1:5173';}
+export function allowedRealtimeOrigin(origin:string|undefined){
+ const extras=(process.env.VOICE_ALLOWED_ORIGINS??'').split(',').map(value=>value.trim()).filter(Boolean);
+ return origin==='http://localhost:5173'||origin==='http://127.0.0.1:5173'||extras.includes(origin??'');
+}
 export type BridgeSocket={readyState:number;bufferedAmount:number;send:(data:string)=>void;close:(code?:number)=>void;terminate:()=>void;on:(event:string,listener:(...args:any[])=>void)=>unknown};
 export function bridgeRealtime(browser:BridgeSocket,provider:BridgeSocket){
  let stopped=false,ready=false;

@@ -1,13 +1,10 @@
-import { CASE, FACTS, QUALIFICATIONS, type Fact, type Qualification } from './case.ts';
-import { DOCS, type Doc } from './documents.ts';
+import manifest from '../../../data/sample-case/manifest.json';
+import library from '../../../data/library.json';
+import type { CaseBundle, Fact, Qualification } from './bundle.js';
+import type { Doc } from './documents.js';
+import { SAMPLE_DATA } from './sampleData.js';
 
 export type CaseId = 'c1-c2' | 'c3' | 'c4' | 'c5';
-export type CaseDataset = {
-  id: CaseId;
-  meta: { title: string; court: string; side: string; amount: string; relationship: string; asOf: string; nextHearing?: string };
-  facts: Fact[]; qualifications: Qualification[]; docs: Doc[];
-};
-export const ORIGINAL_CASE: CaseDataset = {id:'c1-c2', meta:CASE, facts:FACTS, qualifications:QUALIFICATIONS, docs:DOCS};
 
 // Each embedded exhibit is authored synthetic evidence, never an official retrieved document.
 function exhibit(id: string, title: string, date: string | undefined, text: string, group: Doc['group'] = 'case'): Doc {
@@ -16,13 +13,14 @@ function exhibit(id: string, title: string, date: string | undefined, text: stri
     text:`SYNTHETIC — DOCUMENT FICTIF POUR DÉMONSTRATION\n${title}\n${date ?? ''}\n\n${text}`};
 }
 function fact(id: string, date: string, doc: string, kind: string, summary: string, quote: string, qualification?: string): Fact {
-  return {id, date, doc, kind, summary, anchors:[{doc, quote}], qualification};
+  return {id, date, doc, kind, summary, anchors:[{doc, quote}], qualification, role:'other', attrs:{}, verified:true};
 }
 function qual(id: string, factId: string, proposed: boolean, question: string, yes: string, no: string, rule: string, reasoning: string, whatIfLabel: string, source: Qualification['source'] = 'rule', confidence: Qualification['confidence'] = 'high'): Qualification {
-  return {id, factId, proposed, question, yes, no, rule, reasoning, whatIfLabel, source, confidence};
+  return {id, kind:'preset', factId, proposed, question, yes, no, rule, reasoning, whatIfLabel, source, confidence};
 }
-const C3: CaseDataset = {
-  id:'c3', meta:{title:'Créations Verrières SAS v. Fonderie Ardennaise SARL', court:'Tribunal de commerce de Charleville-Mézières', side:'Defendant (Fonderie Ardennaise SARL)', amount:'42 600 €', relationship:'Between merchants — collective proceedings', asOf:'2026-10-04'},
+const C3: CaseBundle = {
+  id:'c3', origin:'cached', preset:'c3',
+  profile:{title:'Créations Verrières SAS v. Fonderie Ardennaise SARL', court:'Tribunal de commerce de Charleville-Mézières', courtType:'tribunal_commerce', side:'Defendant (Fonderie Ardennaise SARL)', claimant:'Créations Verrières SAS', defendant:'Fonderie Ardennaise SARL', amount:'42 600 €', relationship:'commercial', summary:'Between merchants — collective proceedings', asOf:'2026-10-04'},
   docs:[
     exhibit('c3-contract','Contrat de fourniture','2019-03-12','Créations Verrières SAS fournit des pièces à Fonderie Ardennaise SARL. Les deux parties contractent en qualité de commerçants.'),
     exhibit('c3-invoice','Facture F-2024-211','2024-09-05',"Créations Verrières SAS → Fonderie Ardennaise SARL\nMontant : 42 600 €\nDate d'échéance : 05/09/2024"),
@@ -52,8 +50,9 @@ const C3: CaseDataset = {
     qual('q-knowledge','g7',false,'Was the creditor unable to know the existence of the debt?','Possible exceptional relief timing — court review','No debt-knowledge impossibility established','L622-26 C. com.','Ignorance of insolvency is not inability to know the existence of the debt. The email alone proves neither a statutory exception nor judicial relief.','Hypothetical proof of inability to know the existence of the debt','ai_inferred','medium'),
   ],
 };
-const C4: CaseDataset = {
-  id:'c4', meta:{title:'M. Antoine Rigal v. MobiPlus Distribution SAS', court:'Tribunal judiciaire de Paris', side:'Defendant (M. Antoine Rigal, consumer)', amount:'Jurisdiction dispute', relationship:'B2C — consumer contract', asOf:'2026-10-04'},
+const C4: CaseBundle = {
+  id:'c4', origin:'cached', preset:'c4',
+  profile:{title:'M. Antoine Rigal v. MobiPlus Distribution SAS', court:'Tribunal judiciaire de Paris', courtType:'tribunal_judiciaire', side:'Defendant (M. Antoine Rigal, consumer)', claimant:'M. Antoine Rigal', defendant:'MobiPlus Distribution SAS', amount:'Jurisdiction dispute', relationship:'consumer', summary:'B2C — consumer contract', asOf:'2026-10-04'},
   docs:[
     exhibit('c4-cgv','CGV — article 22','2025-01-01',"Tout litige relatif à l'exécution des présentes sera porté devant les tribunaux de Paris."),
     exhibit('c4-order','Confirmation de commande','2025-09-02','M. Antoine Rigal, consommateur, domicile : 14 rue de la Fosse, Nantes.'),
@@ -78,8 +77,9 @@ const C4: CaseDataset = {
     qual('q-merits-first','h4',true,'Were merits submissions filed before the jurisdiction objection?','Merits first — timing bar','Objection first — timing bar removed','arts. 74, 75 CPC','The first submissions argue the merits only. A timely, reasoned objection naming Nantes would remove this timing bar, not guarantee transfer.','Jurisdiction objection raised before the merits'),
   ],
 };
-const C5: CaseDataset = {
-  id:'c5', meta:{title:'Trans-Alpine Logistique SAS v. Minoterie du Verdon SA', court:"Cour d'appel de Grenoble", side:'Respondent (Minoterie du Verdon SA)', amount:'Carriage charges — appeal', relationship:'Ordinary appeal with mandatory representation', asOf:'2026-10-04'},
+const C5: CaseBundle = {
+  id:'c5', origin:'cached', preset:'c5',
+  profile:{title:'Trans-Alpine Logistique SAS v. Minoterie du Verdon SA', court:"Cour d'appel de Grenoble", courtType:'other', side:'Respondent (Minoterie du Verdon SA)', claimant:'Trans-Alpine Logistique SAS', defendant:'Minoterie du Verdon SA', amount:'Carriage charges — appeal', relationship:'commercial', summary:'Ordinary appeal with mandatory representation', asOf:'2026-10-04'},
   docs:[
     exhibit('c5-judgment','Jugement de première instance','2025-07-01','Tribunal de commerce de Grenoble : déboute la société Trans-Alpine Logistique de sa demande de paiement des frais de transport.'),
     exhibit('c5-service','Signification du jugement','2025-07-08','Jugement signifié le 08 juillet 2025 à Trans-Alpine Logistique SAS.'),
@@ -104,19 +104,23 @@ const C5: CaseDataset = {
     qual('q-force-majeure','k4',false,'Could qualifying force majeure excuse filing before the lapse order?','Potential pre-order judicial disapplication','Force majeure not established','art. 911 CPC','Waiting for an expert report alone does not show an insurmountable circumstance not attributable to the party. A later assertion cannot undo the existing order.','Qualifying force majeure (pre-order hypothetical)','ai_inferred','low'),
   ],
 };
-export const CASE_CATALOG: CaseDataset[] = [ORIGINAL_CASE, C3, C4, C5];
-export function getCase(id: string): CaseDataset {
-  const c = CASE_CATALOG.find(c => c.id === id);
+type CaseManifestDoc = { id: string; title: string; short: string; date: string; provenance: 'mock'; note: string };
+type LibraryManifestDoc = Omit<Doc, 'text' | 'pdf'> & { file: string; pdf?: string };
+const sampleDocs: Doc[] = (manifest as CaseManifestDoc[]).map(({ id, title, short, date, provenance, note }) => ({
+  id, title, short, date, provenance, note, group:'case', format:'text', text:'',
+}));
+const libraryDocs: Doc[] = (library as LibraryManifestDoc[]).map(({ file: _file, pdf: _pdf, ...doc }) => ({
+  ...doc, text:'',
+}));
+export const PRESETS: CaseBundle[] = [C3, C4, C5].map((bundle) => ({
+  ...bundle,
+  docs: [...bundle.docs, ...libraryDocs],
+}));
+export const VOICE_SAMPLE: CaseBundle = { ...SAMPLE_DATA, id:'c1-c2', docs:[...sampleDocs, ...libraryDocs] };
+export const CASE_CATALOG: CaseBundle[] = [VOICE_SAMPLE, ...PRESETS];
+
+export function getCase(id: string): CaseBundle {
+  const c = CASE_CATALOG.find((item) => item.id === id);
   if (!c) throw new Error(`Unknown case ${id}`);
   return c;
-}
-export function caseQualification(c: CaseDataset, id: string): Qualification {
-  const q = c.qualifications.find(q => q.id === id);
-  if (!q) throw new Error(`Unknown qualification ${id} for ${c.id}`);
-  return q;
-}
-export function caseDocument(c: CaseDataset, id: string): Doc {
-  const d = c.docs.find(d => d.id === id);
-  if (!d) throw new Error(`Unknown document ${id} for ${c.id}`);
-  return d;
 }

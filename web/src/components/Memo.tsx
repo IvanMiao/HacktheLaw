@@ -1,27 +1,26 @@
 import { useState, type ReactNode } from 'react';
 import { useLocale } from '../i18n/useLocale';
-import { useCase } from '../data/CaseContext';
-import { caseDocument } from '../data/catalog';
-import type { Anchor } from '../data/case';
+import { useBundle } from '../data/useBundle';
+import type { Anchor } from '../data/bundle';
 import { isContested, type Analysis, type AnalysisState } from '../engine/chains';
 import { buildMemo, toMd, type Part } from '../engine/memo';
 import { SourceChip } from './SourceChip';
 
 export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state: AnalysisState; onAnchor: (a: Anchor) => void }) {
   const { t } = useLocale();
-  const dataset = useCase();
-  const blocks = buildMemo(analysis, state, t, dataset);
+  const { bundle, docOf } = useBundle();
+  const blocks = buildMemo(bundle, analysis, state, t);
   const [copied, setCopied] = useState(false);
   const cited = [...new Set(blocks.flatMap((x) => x.parts.filter((p): p is Anchor => typeof p !== 'string').map((p) => p.doc)))];
   const render = (parts: Part[]): ReactNode[] => parts.map((p, i) => (typeof p === 'string' ? p : <SourceChip key={i} anchor={p} onAnchor={onAnchor} />));
-  const pending = analysis.contestedQuals.filter((q) => isContested(state, q, dataset)).length;
+  const pending = analysis.contestedQuals.filter((q) => isContested(bundle, state, q)).length;
 
   return (
     <div className="memo">
       <div className="memo-bar">
         <span className="ai-tag">{t('Draft')}</span>
-        <span className="muted small">{t('Generated from the confirmed analysis')}{pending ? t(' · {count} qualification(s) still provisional', { count: pending }) : ''}{t('. In production the prose is drafted by Mistral, restricted to cited sources.')}</span>
-        <button className="btn" onClick={() => { navigator.clipboard?.writeText(toMd(blocks, t, dataset)); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? t('Copied') : t('Copy Markdown')}</button>
+        {pending > 0 && <span className="muted small">{t('{count} qualification(s) still provisional', { count: pending })}</span>}
+        <button className="btn" onClick={() => { navigator.clipboard?.writeText(toMd(bundle, blocks, t)); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? t('Copied') : t('Copy Markdown')}</button>
       </div>
       <article className="memo-doc">
         {blocks.map((x, i) => {
@@ -34,8 +33,8 @@ export function Memo({ analysis, state, onAnchor }: { analysis: Analysis; state:
           return <p key={i}>{c}</p>;
         })}
         <h2>5. Sources</h2>
-        {cited.map((d) => <p key={d} className="li">{caseDocument(dataset,d).title}{caseDocument(dataset,d).provenance === 'mock' && caseDocument(dataset,d).group !== 'case' ? t(' — mock, to replace') : ''}</p>)}
-        <p className="muted small">{t('{count} documents in the file.', { count: dataset.docs.length })}</p>
+        {cited.map((d) => <p key={d} className="li">{t(docOf(d).title)}{docOf(d).provenance === 'mock' && docOf(d).group !== 'case' ? t(' — mock, to replace') : ''}</p>)}
+        <p className="muted small">{t('{count} documents in the file.', { count: bundle.docs.length })}</p>
       </article>
     </div>
   );

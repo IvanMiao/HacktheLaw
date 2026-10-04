@@ -1,4 +1,4 @@
-import type { CaseId } from './catalog';
+import type { CaseId } from './catalog.js';
 export type CaseIdentity = {caseId:CaseId; generation:number};
 
 /** Synchronous generation boundary: stale A→B→A callbacks cannot regain validity. */

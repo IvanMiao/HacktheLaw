@@ -1,8 +1,8 @@
 import { useLocale } from '../i18n/useLocale';
-import { useCase } from '../data/CaseContext';
+import { useBundle } from '../data/useBundle';
 import { fr } from '../engine/dates';
 import type { CSSProperties } from 'react';
-import type { Anchor } from '../data/case';
+import type { Anchor } from '../data/bundle';
 import type { Analysis, AnalysisState, ChainResult, ChainStatus, Counterfactual, Link, NodeKind } from '../engine/chains';
 import { REGIMES } from '../engine/regimes';
 import { DeadlineTrack } from './DeadlineTrack';
@@ -14,7 +14,7 @@ const KIND: Record<NodeKind, string> = {
   lost_effect: 'Lost effect', consequence: 'Consequence', outcome: 'Outcome',
 };
 
-const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken' };
+const STATUS: Record<ChainStatus, string> = { holds: 'Ground holds', contested: 'Holds — contested', fails: 'Chain broken', not_applicable: 'Not applicable' };
 
 export function StatusPill({ status }: { status: ChainStatus }) {
   const { t } = useLocale();
@@ -28,7 +28,7 @@ type Props = {
 
 export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on642, onReset, onAnchor }: Props) {
   const { t } = useLocale();
-  const dataset = useCase();
+  const { bundle } = useBundle();
   const selected = analysis.chains.flatMap((c) => c.links).find((l) => l.id === linkId);
   const anyWhatIf = Object.keys(state.whatIf).length > 0;
   return (
@@ -36,7 +36,6 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
       <section className="stress">
         <div className="stress-head">
           <span className="section-label">{t('Stress-test')}</span>
-          <span className="muted small">{t('Flip a contested link and watch the dominoes.')}</span>
           {anyWhatIf && <button className="linkish small" onClick={onReset}>{t('Reset scenario')}</button>}
         </div>
         <div className="toggles">
@@ -48,11 +47,10 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
               {c.effects.map((e) => <span key={e.chain} className="effect">{t(e.to === 'fails' ? 'breaks' : 'restores')} {e.chain}</span>)}
             </label>
           ))}
-          {dataset.id === 'c1-c2' && <label className={`toggle ${state.art642 ? 'on' : ''}`}>
+          {!bundle.preset && <label className={`toggle ${state.art642 ? 'on' : ''}`}>
             <input type="checkbox" checked={state.art642} onChange={on642} />
             <span className="switch" aria-hidden />
             <span>{t('Extend a weekend expiry (art. 642 CPC)')}</span>
-            <span className="effect neutral">{t('flag')}</span>
           </label>}
         </div>
       </section>
@@ -74,7 +72,7 @@ export function ChainsView({ analysis, cfs, state, linkId, onLink, onWhatIf, on6
 
 function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: string | null; onLink: (id: string) => void }) {
   const { t } = useLocale();
-  const standing = chain.status !== 'fails';
+  const standing = chain.status === 'holds' || chain.status === 'contested';
   const broken = chain.links.find((l) => l.status === 'broken');
   return (
     <section className={`lane lane-${chain.status}`}>
@@ -82,10 +80,12 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
         <span className="lane-id mono">{chain.id}</span>
         <div className="lane-title">
           <h3>{chain.title}</h3>
-          <p className="muted small">{chain.subtitle}</p>
+          {chain.status !== 'not_applicable' && <p className="muted small">{chain.subtitle}</p>}
         </div>
         <StatusPill status={chain.status} />
       </header>
+      {chain.status === 'not_applicable' && <p className="lane-note">{chain.missing?.join('; ')}</p>}
+      {chain.status !== 'not_applicable' && <>
       <ol className="tiles" style={{ gridTemplateColumns: `repeat(${chain.links.length}, minmax(0, 1fr))` }}>
         {chain.links.map((l, i) => {
           const next = chain.links[i + 1];
@@ -103,24 +103,23 @@ function Lane({ chain, selected, onLink }: { chain: ChainResult; selected: strin
                   <strong>{l.title}</strong>
                   <span>{l.statement}</span>
                 </span>
-                <span className="tile-foot">
-                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span>
-                    : l.status === 'broken' ? <span className="breaks">{t('Breaks here')}</span>
-                    : <span className="mono">{l.rule ?? t(l.anchors.length === 1 ? '{count} source' : '{count} sources', { count: l.anchors.length })}</span>}
-                </span>
+                {(l.status === 'contested' || l.status === 'broken') && <span className="tile-foot">
+                  {l.status === 'contested' ? <span className="ai-tag">{t('AI-inferred')}</span> : <span className="breaks">{t('Breaks here')}</span>}
+                </span>}
               </button>
             </li>
           );
         })}
       </ol>
       {broken?.brokenReason && <p className="lane-note"><span className="sev">✂</span> {broken.title}: {broken.brokenReason}</p>}
+      </>}
     </section>
   );
 }
 
 function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysis: Analysis; onAnchor: (a: Anchor) => void; onClose: () => void }) {
   const { t } = useLocale();
-  const dataset = useCase();
+  const { bundle } = useBundle();
   const regime = link.regime && REGIMES[link.regime];
   return (
     <aside className="drawer" aria-label={t('Link detail')}>
@@ -152,15 +151,17 @@ function LinkDrawer({ link, analysis, onAnchor, onClose }: { link: Link; analysi
           <tbody><tr><td>{t(regime.name)}</td><td>{t(regime.when)}</td><td>{t(regime.prejudice)}</td><td>{t(regime.curable)}</td><td>{t(regime.ownMotion)}</td><td>{t(regime.interruption)}</td></tr></tbody>
         </table>
       )}
-      {dataset.id === 'c1-c2' && link.kind === 'consequence' && (
+      {!bundle.preset && link.kind === 'consequence' && (
         <div className="deadline">
           <div className="section-label">{t('Limitation calculation')}</div>
-          <DeadlineTrack lim={analysis.limitation} />
-          <ol className="steps">
-            {analysis.limitation.steps.map((s, i) => (
-              <li key={i} className={`step step-${s.effect}`}><span className="mono">{s.date.split('-').reverse().join('/')}</span><span>{s.text}</span><span className="muted mono">{s.rule}</span></li>
-            ))}
-          </ol>
+          {analysis.limitation && <>
+            <DeadlineTrack lim={analysis.limitation} />
+            <ol className="steps">
+              {analysis.limitation.steps.map((s, i) => (
+                <li key={i} className={`step step-${s.effect}`}><span className="mono">{s.date.split('-').reverse().join('/')}</span><span>{s.text}</span><span className="muted mono">{s.rule}</span></li>
+              ))}
+            </ol>
+          </>}
         </div>
       )}
     </aside>

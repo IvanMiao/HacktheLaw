@@ -35,3 +35,14 @@ it('rejects cross-origin or missing-origin requests; provider/model is never cli
  for(const origin of [undefined,'null','https://attacker.test','http://localhost:9999'])expect(allowedRealtimeOrigin(origin)).toBe(false);
  expect(REALTIME_MODEL).toBe('voxtral-mini-transcribe-realtime-2602');
 });
+it('accepts comma-separated VOICE_ALLOWED_ORIGINS for realtime upgrades',()=>{
+ const previous=process.env.VOICE_ALLOWED_ORIGINS;
+ process.env.VOICE_ALLOWED_ORIGINS='https://demo.example, https://review.example ';
+ try{
+  expect(allowedRealtimeOrigin('https://demo.example')).toBe(true);
+  expect(allowedRealtimeOrigin('https://review.example')).toBe(true);
+  expect(allowedRealtimeOrigin('https://attacker.test')).toBe(false);
+ }finally{
+  if(previous===undefined)delete process.env.VOICE_ALLOWED_ORIGINS;else process.env.VOICE_ALLOWED_ORIGINS=previous;
+ }
+});

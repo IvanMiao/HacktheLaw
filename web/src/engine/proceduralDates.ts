@@ -1,4 +1,4 @@
-import { addDays, isWeekend, toDate, toIso } from './dates.ts';
+import { addDays, isWeekend, toDate, toIso } from './dates.js';
 
 /** National metropolitan France calendar. Local holidays and court closure orders require review. */
 export function franceHolidays(year: number): string[] {

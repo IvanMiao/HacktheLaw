@@ -4,6 +4,7 @@ import { requestJson } from '../voice/client';
 import { IntentQueue, listenRealtime, type ListenState, type RealtimeDiagnostic } from '../voice/realtime';
 import { validateIntent, type Intent, type VoiceContext } from '../voice/contract';
 import type { ReactNode } from 'react';
+import { useLocale } from '../i18n/useLocale';
 export function OffOnlyFallback({listening,children}:{listening:boolean;children:ReactNode}){return listening?null:children;}
 
 
@@ -45,4 +46,11 @@ export function VoicePanel({ context, onIntent }: {context:VoiceContext;onIntent
   <details className="voice-help"><summary>{label('Try a command · privacy & safety','指令示例 · 隐私与安全')}</summary><div className="voice-examples">{EXAMPLES.map(example=><button key={example} type="button" className="chip" disabled={listening||busy} onClick={()=>setText(example)}>{example}</button>)}</div><p>{label('Turn ON to stream microphone PCM continuously through your local server to Mistral realtime. Pause after a complete command: navigation, explanations and hypothetical previews execute automatically. OFF immediately releases the microphone and discards pending commands. No audio uploads or TTS feedback. Do not use confidential client data.','打开后，麦克风 PCM 音频经本地服务持续流向 Mistral 实时转写。完整指令后停顿，导航、解释和假设预览自动执行。关闭立即释放麦克风并丢弃待处理指令。请勿使用保密客户信息。')}</p><p>{label('Previews are hypothetical only; voice never confirms/rejects legal facts. Explanations come from the deterministic demo engine. Sources retain real/mock labels.','预览仅为假设；语音不能确认或否定法律事实。解释来自确定性演示引擎，来源保留真实 / 模拟标记。')}</p></details>
   {error&&<p className="voice-error" role="alert">{error}</p>}{result&&<div className="voice-result" aria-live="polite"><p>{result}</p>{sources.length>0&&<div className="chips">{sources.map(id=><button key={id} className="chip" onClick={()=>onIntent({action:'show_evidence',target:id,value:null,sourceIds:[id]})}>{id} · {context.sources.find(s=>s.id===id)?.provenance}</button>)}</div>}</div>}
  </section>;
+}
+
+export function DisabledVoicePanel() {
+  const { t } = useLocale();
+  return <section className="voice-panel voice-disabled" aria-label={t('Voice commands')}>
+    <p>{t('Voice commands are available for the demo cases only.')}</p>
+  </section>;
 }

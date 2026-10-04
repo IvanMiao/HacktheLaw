@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { createHandler } from './api';
+import { createHandler } from './voice-api';
 import { getCase } from '../src/data/catalog';
 import { buildContext } from '../src/voice/commands';
 import { initialState } from '../src/engine/chains';
@@ -17,6 +17,18 @@ async function start(fetchImpl:typeof fetch) {
 }
 
 describe('multi-case HTTP boundary — explicitly fake provider only', () => {
+  it('includes the same manifest/library source metadata for every server catalog case', () => {
+    const library = getCase('c1-c2').docs.filter((doc) => doc.group !== 'case')
+      .map(({ id, title, provenance }) => ({ id, title, provenance }));
+    const libraryIds = new Set(library.map((doc) => doc.id));
+    for (const id of ['c1-c2', 'c3', 'c4', 'c5']) {
+      const bundle = getCase(id);
+      expect(bundle.docs.filter((doc) => libraryIds.has(doc.id))
+        .map(({ id, title, provenance }) => ({ id, title, provenance }))).toEqual(library);
+      expect(buildContext(initialState(bundle), bundle).sources).toEqual(bundle.docs.map(({ id, title, provenance }) => ({ id, title, provenance })));
+    }
+  });
+
   it.each(['c1-c2','c3','c4','c5'])('sends only selected %s schema and grounds its evidence response', async id => {
     const c=getCase(id);const context=buildContext(initialState(c),c);const target=c.facts[0].doc;
     const intent={action:'show_evidence',target,value:null,sourceIds:[target]};

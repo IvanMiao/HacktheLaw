@@ -1,4 +1,4 @@
 {
-  "compilerOptions": { "target": "es2023", "lib": ["ES2023", "DOM"], "module": "esnext", "moduleResolution": "bundler", "types": ["node"], "allowImportingTsExtensions": true, "noEmit": true, "strict": true, "skipLibCheck": true, "erasableSyntaxOnly": true },
+  "compilerOptions": { "target": "es2023", "lib": ["ES2023", "DOM"], "module": "esnext", "moduleResolution": "bundler", "types": ["node", "vite/client"], "allowImportingTsExtensions": true, "resolveJsonModule": true, "noEmit": true, "strict": true, "skipLibCheck": true, "erasableSyntaxOnly": true },
   "include": ["server/api.ts", "server/index.ts"]
 }

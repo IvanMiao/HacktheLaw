@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { createHandler } from './api';
+import { createHandler } from './voice-api';
+import { getCase } from '../src/data/catalog';
 import { buildContext } from '../src/voice/commands';
 import { initialState } from '../src/engine/chains';
 
@@ -11,7 +12,8 @@ async function start(options = {}) {
  const server = createServer(createHandler(options)); servers.push(server); server.listen(0, '127.0.0.1'); await once(server, 'listening');
  const address = server.address() as {port:number}; return `http://127.0.0.1:${address.port}`;
 }
-const body = () => JSON.stringify({ text: 'Show clause evidence', context: buildContext(initialState()) });
+const sample = getCase('c1-c2');
+const body = () => JSON.stringify({ text: 'Show clause evidence', context: buildContext(initialState(sample), sample) });
 describe('local Mistral API (test-only injected provider)', () => {
  it('reports missing key and keeps errors redacted', async () => {
   const url = await start({ apiKey: '' });
@@ -86,5 +88,19 @@ describe('local Mistral API (test-only injected provider)', () => {
  it('blocks cross-origin browser requests', async () => {
   const url = await start({apiKey:'dummy'});
   expect((await fetch(url+'/api/intent',{method:'POST',headers:{Origin:'https://evil.example','Content-Type':'application/json'},body:body()})).status).toBe(403);
+ });
+ it('accepts comma-separated additional browser origins from VOICE_ALLOWED_ORIGINS', async () => {
+  const previous = process.env.VOICE_ALLOWED_ORIGINS;
+  process.env.VOICE_ALLOWED_ORIGINS = 'https://demo.example, https://review.example ';
+  try {
+   const url = await start({apiKey:'dummy'});
+   for (const origin of ['http://localhost:5173','http://127.0.0.1:5173','https://demo.example','https://review.example']) {
+    expect((await fetch(url+'/api/status',{headers:{Origin:origin}})).status).toBe(200);
+   }
+   expect((await fetch(url+'/api/status',{headers:{Origin:'https://evil.example'}})).status).toBe(403);
+  } finally {
+   if (previous === undefined) delete process.env.VOICE_ALLOWED_ORIGINS;
+   else process.env.VOICE_ALLOWED_ORIGINS = previous;
+  }
  });
 });
